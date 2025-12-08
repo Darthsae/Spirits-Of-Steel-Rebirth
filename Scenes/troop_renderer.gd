@@ -78,7 +78,7 @@ func _draw() -> void:
 	if not _can_draw():
 		return
 
-	var player_country = CurrentPlayer.country_name
+	var player_country = CountryManager.player_country.country_name
 	var map_offset := map_sprite.texture.get_size() * 0.5
 	
 	# --- NEW: Group troops for stacking ---

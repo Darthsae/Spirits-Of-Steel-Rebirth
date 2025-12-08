@@ -209,7 +209,7 @@ func _lock_troops_in_province(pid: int) -> void:
 # =============================================================
 func _on_ai_tick(_hour: int = 0) -> void:
 	var all_countries = MapManager.country_to_provinces.keys()
-	var player_country = CurrentPlayer.get_country() if CurrentPlayer else ""
+	var player_country = CountryManager.player_country.country_name if CountryManager else ""
 
 	for country in all_countries:
 		if country == player_country: continue
