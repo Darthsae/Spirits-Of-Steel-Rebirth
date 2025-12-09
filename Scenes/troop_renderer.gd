@@ -1,4 +1,5 @@
 extends Node2D
+class_name TroopRenderer
 
 ###
 # I've generated this whole file with ChatGPT
@@ -163,8 +164,7 @@ func _draw_single_troop_visual(troop: TroopData, pos: Vector2, player_country: S
 	
 	# 2. Text Area Calculation
 	var font_size_world = LAYOUT.font_size * scale_factor
-	# FIXME(pol): Must pass in alignment and width before font_size
-	var raw_text_size = _font.get_string_size(label_text, LAYOUT.font_size) * scale_factor
+	var raw_text_size = _font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_CENTER, -1, 18) * scale_factor
 	
 	# Ensure the text area is at least the minimum width defined in config
 	var min_text_w_world = LAYOUT.min_text_width * scale_factor

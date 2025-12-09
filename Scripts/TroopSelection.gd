@@ -12,7 +12,6 @@ const FLAG_WIDTH_BASE := 32.0
 const FLAG_HEIGHT_BASE := 20.0
 const PADDING_BASE := 6.0
 const GAP_BASE := 8.0
-const FONT_SIZE_BASE := 20
 
 # --- State ---
 const CLICK_THRESHOLD := 1.0  # pixels – how far mouse can move and still count as a "click"
@@ -57,6 +56,7 @@ func _input(event) -> void:
 				_sample_province_under_mouse()
 			queue_redraw()
 
+
 # ---------------------------
 # Left-click Selection
 # ---------------------------
@@ -82,6 +82,7 @@ func _handle_left_mouse(event: InputEventMouseButton) -> void:
 		if drag_distance >= CLICK_THRESHOLD and SelectionManager.is_a_troop_selected():
 			MusicManager.play_sfx(MusicManager.SFX.TROOP_SELECTED)
 
+
 func _perform_selection() -> void:
 	if not map_sprite: return
 
@@ -101,8 +102,8 @@ func _perform_selection() -> void:
 
 		var label = str(t.divisions)
 		
-		# FIXME(pol): Must pass in alignment and width before font_size
-		var text_size = font.get_string_size(label, FONT_SIZE_BASE) * inv_zoom
+		var font_size := TroopRenderer.LAYOUT.font_size
+		var text_size = font.get_string_size(label, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size) * inv_zoom
 		
 		var w = flag_size.x + (GAP_BASE * inv_zoom) + text_size.x + (pad * 2)
 		var h = max(flag_size.y, text_size.y) + (pad * 2)
@@ -124,7 +125,8 @@ func _perform_selection() -> void:
 		max_path_length += troop.divisions
 
 	#print("Live selection: %d troops, %d divisions" % [selected_list.size(), max_path_length])
-	
+
+
 func _check_rect_intersection(selection_rect: Rect2, troop_rect: Rect2, tx: float, tex_w: float) -> bool:
 	# Standard check
 	if selection_rect.intersects(troop_rect): return true
@@ -141,6 +143,7 @@ func _check_rect_intersection(selection_rect: Rect2, troop_rect: Rect2, tx: floa
 		if selection_rect.intersects(wrapped): return true
 		
 	return false
+
 
 # ---------------------------
 # Right-click Path Logic (With Split Support)
@@ -165,6 +168,7 @@ func _handle_right_mouse(event: InputEventMouseButton) -> void:
 		right_path.clear()
 		right_dragging = false
 		queue_redraw()
+
 
 func _sample_province_under_mouse() -> void:
 	if not map_sprite: return
@@ -194,6 +198,7 @@ func _sample_province_under_mouse() -> void:
 	})
 	
 	print("Sampled province %d. Path length: %d/%d" % [pid, right_path.size(), max_path_length])
+
 
 func _perform_path_assignment() -> void:
 	if right_path.is_empty(): return
@@ -273,6 +278,7 @@ func _perform_path_assignment() -> void:
 		TroopManager.command_move_assigned(assignments)
 		right_path.clear()
 		selected_troops.clear()
+
 
 # ---------------------------
 # Drawing
