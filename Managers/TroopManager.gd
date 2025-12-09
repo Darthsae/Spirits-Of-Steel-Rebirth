@@ -35,8 +35,8 @@ func _update_time_stuff(speed) -> void:
 func change_merge() -> void:
 	AUTO_MERGE = !AUTO_MERGE
 	if AUTO_MERGE:
-		if CurrentPlayer and MapManager:
-			var current_country = CurrentPlayer.get_country()
+		if CountryManager and MapManager:
+			var current_country = CountryManager.player_country.country_name
 			var provinces = MapManager.country_to_provinces.get(current_country, [])
 			for prov in provinces:
 				_auto_merge_in_province(prov, current_country)
@@ -195,7 +195,7 @@ func command_move_assigned(payload: Array) -> void:
 		if not troop or target_pid <= 0: continue
 
 		# Play SFX only once
-		if not sfx_played and troop.country_name == CurrentPlayer.country_name:
+		if not sfx_played and troop.country_name == CountryManager.player_country.country_name:
 			if MusicManager: MusicManager.play_sfx(MusicManager.SFX.TROOP_MOVE)
 			sfx_played = true
 

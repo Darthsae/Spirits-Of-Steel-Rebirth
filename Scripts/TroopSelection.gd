@@ -96,7 +96,7 @@ func _perform_selection() -> void:
 	var pad = PADDING_BASE * inv_zoom
 
 	for t in TroopManager.troops:
-		if t.country_name.to_lower() != CurrentPlayer.country_name:
+		if t.country_name.to_lower() != CountryManager.player_country.country_name:
 			continue
 
 		var label = str(t.divisions)
