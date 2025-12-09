@@ -15,6 +15,9 @@ var path_cache: Dictionary = {}            # { start_id: { target_id: path_array
 var flag_cache: Dictionary = {}            # { country_name: texture }
 var needs_redraw := false                  # Used to throttle redraw calls
 
+# NOTE(pol): Unused
+#var unique_paths_needed: Dictionary = {}
+
 # =============================================================
 # LIFECYCLE & TIME MANAGEMENT
 # =============================================================
@@ -24,8 +27,10 @@ func _ready() -> void:
 	if MainClock:
 		MainClock.time_scale_changed.connect(_update_time_stuff)
 
+
 func _update_time_stuff(speed) -> void:
 	BASE_SPEED = speed
+
 
 func change_merge() -> void:
 	AUTO_MERGE = !AUTO_MERGE
@@ -35,6 +40,7 @@ func change_merge() -> void:
 			var provinces = MapManager.country_to_provinces.get(current_country, [])
 			for prov in provinces:
 				_auto_merge_in_province(prov, current_country)
+
 
 func _process(delta: float) -> void:
 	if moving_troops.is_empty():
@@ -57,10 +63,10 @@ func _process(delta: float) -> void:
 		get_tree().call_group("TroopRenderer", "queue_redraw")
 		needs_redraw = false
 
+
 # =============================================================
 # MOVEMENT LOGIC
 # =============================================================
-
 func _update_smooth(troop: TroopData, delta: float) -> void:
 	var start = troop.get_meta("start_pos", troop.position)
 	var end = troop.target_position
@@ -120,18 +126,18 @@ func _arrive_at_leg_end(troop: TroopData) -> void:
 	else:
 		_start_next_leg(troop)
 		needs_redraw = true
-	
+
+
 ## Prepares the troop for the next segment of its journey.
 func _start_next_leg(troop: TroopData) -> void:
 	if troop.path.is_empty():
 		return
 	
-
 	var next_pid = troop.path[0]
 	# Set the target position to the center of the next province
 	troop.target_position = MapManager.province_centers.get(int(next_pid), troop.position)
 	troop.set_meta("start_pos", troop.position)
-
+	
 	# Reset progress for smooth movement
 	if USE_SMOOTH_MOVEMENT:
 		troop.set_meta("progress", 0.0)
@@ -143,6 +149,7 @@ func _start_next_leg(troop: TroopData) -> void:
 	if not is_processing():
 		set_process(true)
 
+
 ## Stops the troop and disables processing if no others are moving.
 func _stop_troop(troop: TroopData) -> void:
 	moving_troops.erase(troop)
@@ -152,15 +159,15 @@ func _stop_troop(troop: TroopData) -> void:
 	if moving_troops.is_empty():
 		set_process(false)
 
+
 # =============================================================
 # COMMAND & PATHFINDING
 # =============================================================
-
 ## Public entry point for a single troop move order.
 func order_move_troop(troop: TroopData, target_pid: int) -> void:
 	command_move_assigned([ { "troop": troop, "province_id": target_pid } ])
 
-var unique_paths_needed: Dictionary = {}
+
 func command_move_assigned(payload: Array) -> void:
 	if payload.is_empty(): return
 
@@ -252,6 +259,7 @@ func command_move_assigned(payload: Array) -> void:
 				
 			_start_next_leg(troop)
 
+
 func _get_cached_path(start_id: int, target_id: int, allowed_countries: Array[String]) -> Array:
 	if start_id == target_id: return []
 
@@ -273,7 +281,6 @@ func _get_cached_path(start_id: int, target_id: int, allowed_countries: Array[St
 # =============================================================
 # SPLIT & MANEUVER
 # =============================================================
-
 func _split_and_send_troop(original_troop: TroopData, target_pids: Array, paths: Dictionary) -> void:
 	var total_divs = original_troop.divisions
 	var num_targets = target_pids.size()
@@ -282,6 +289,7 @@ func _split_and_send_troop(original_troop: TroopData, target_pids: Array, paths:
 	# Prevent splitting if we don't have enough troops for 1 per target
 	if total_divs < num_targets: return 
 
+	@warning_ignore("integer_division")
 	var base_divs = total_divs / num_targets
 	var remainder = total_divs % num_targets
 	
@@ -333,6 +341,7 @@ func _split_and_send_troop(original_troop: TroopData, target_pids: Array, paths:
 
 	print("Split %s (%d divs) into %d armies" % [original_troop.country_name, total_divs, num_targets])
 
+
 ## Creates and registers a new troop object resulting from a split.
 func _create_new_split_troop(original: TroopData, divisions: int) -> TroopData:
 	var pos = original.position
@@ -358,10 +367,10 @@ func _create_new_split_troop(original: TroopData, divisions: int) -> TroopData:
 
 	return new_troop
 
+
 # =============================================================
 # TROOP MANAGEMENT & CREATION
 # =============================================================
-
 ## Creates a new troop and registers it in all indexes.
 func create_troop(country: String, divs: int, prov_id: int) -> TroopData:
 	if divs <= 0: return null
@@ -401,6 +410,7 @@ func create_troop(country: String, divs: int, prov_id: int) -> TroopData:
 
 	return troop
 
+
 func _auto_merge_in_province(province_id: int, country: String) -> void:
 	if not AUTO_MERGE:
 		return
@@ -435,10 +445,10 @@ func _auto_merge_in_province(province_id: int, country: String) -> void:
 # =============================================================
 # WAR MANAGER INTERFACE (Hooks for Combat & Strategy)
 # =============================================================
-
 ## Public hook for the WarManager to remove a troop that has lost a battle.
 func remove_troop_by_war(troop: TroopData) -> void:
 	_remove_troop(troop)
+
 
 ## Public hook for the WarManager to force a troop to its home province center.
 func move_to_garrison(troop: TroopData) -> void:
@@ -448,10 +458,10 @@ func move_to_garrison(troop: TroopData) -> void:
 	_stop_troop(troop) # Stops any ongoing movement
 	needs_redraw = true
 
+
 # =============================================================
 # INDEXING HELPERS (Internal Maintenance)
 # =============================================================
-
 ## Adds a troop reference to the spatial and country dictionaries.
 func _add_troop_to_indexes(troop: TroopData) -> void:
 	var pid = troop.province_id
@@ -466,6 +476,7 @@ func _add_troop_to_indexes(troop: TroopData) -> void:
 	if not troops_by_country.has(country):
 		troops_by_country[country] = []
 	troops_by_country[country].append(troop)
+
 
 ## Removes a troop reference from all data structures (master, moving, indexes).
 func _remove_troop(troop: TroopData) -> void:
@@ -485,6 +496,7 @@ func _remove_troop(troop: TroopData) -> void:
 	# 3. Country Index
 	if troops_by_country.has(country):
 		troops_by_country[country].erase(troop)
+
 
 ## Updates the troop's location in the spatial index (troops_by_province).
 func _move_troop_to_province_logically(troop: TroopData, new_pid: int) -> void:
@@ -512,9 +524,11 @@ func get_province_division_count(pid: int) -> int:
 	return total
 	
 
+
 func clear_path_cache() -> void:
 	path_cache.clear()
 	print ("Pathfinding cache cleared")
+
 
 # Remove leading waypoints that are equal to the troop's current province.
 func _sanitize_path_for_troop(path: Array, start_pid: int) -> Array:
@@ -531,7 +545,8 @@ func _sanitize_path_for_troop(path: Array, start_pid: int) -> Array:
 # extra helper functions. Not made by AI
 func get_troops_for_country(country):
 	return troops_by_country.get(country, [])
-	
+
+
 func get_troops_in_province(province_id):
 	return troops_by_province.get(province_id, [])
 

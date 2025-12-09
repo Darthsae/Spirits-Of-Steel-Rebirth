@@ -61,11 +61,12 @@ func _draw() -> void:
 		var pixel_pos = Vector2(province_centers[pid].x, province_centers[pid].y)
 		var world_pos = pixel_pos - offset  # Convert from pixel coords → world coords
 
-		var col = dot_color
-		if pid == selected_pid:
-			col = selected_color
-		elif pid == hovered_pid:
-			col = hovered_color
+		# NOTE(pol): selected and hovered pid are always -1
+		#var col = dot_color
+		#if pid == selected_pid:
+			#col = selected_color
+		#elif pid == hovered_pid:
+			#col = hovered_color
 
 		# Draw in WORLD SPACE → perfect size at any zoom
 		draw_circle(world_pos, dot_size * 0.5, Color.GREEN)
@@ -78,14 +79,18 @@ func _draw() -> void:
 			var pos1 = Vector2(province_centers.get(pid1, Vector2.ZERO).x, province_centers.get(pid1, Vector2.ZERO).y) - offset
 			var pos2 = Vector2(province_centers.get(pid2, Vector2.ZERO).x, province_centers.get(pid2, Vector2.ZERO).y) - offset
 			draw_line(pos1, pos2, Color.RED, 3.0)
+
+
 # === API (call these from MapManager) ===
 func set_centers(centers: Dictionary) -> void:
 	province_centers = centers.duplicate()
 	queue_redraw()
 
+
 func select_province(pid: int) -> void:
 	selected_pid = pid
 	queue_redraw()
+
 
 func hover_province(pid: int) -> void:
 	hovered_pid = pid
@@ -95,6 +100,7 @@ func set_enabled(v: bool) -> void:
 	enabled = v
 	visible = v
 	queue_redraw()
+
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed:

@@ -9,34 +9,32 @@ var flag_texture: Texture2D = TroopManager.get_flag(country_name)
 # Stats
 var political_power: int = 0
 var stability: float = 0.75   # 0.0 → 1.0
-var money: int = 1000
+var money: float = 1000
 var manpower: int = 50000
-
-
 
 # Constants for now
 var MIN_STABILITY := 0.0
 var MAX_STABILITY := 1.0
-var POLITICAL_POWER_GAIN_DAILY := 2.0
+var POLITICAL_POWER_GAIN_DAILY := 2
 var DOLLAR_INCOME_DAILY := 480.0      # example: 20/hour * 24
 var MANPOWER_GROWTH_DAILY := 600       # example: 25/hour * 24
 
 
-
-func get_country():
+func get_country() -> String:
 	return self.country_name.to_lower()
+
+
 func _ready() -> void:
 	await get_tree().process_frame  # wait until all singletons are ready
 	if MainClock and not MainClock.is_connected("day_passed", Callable(self, "_on_day_passed")):
 		MainClock.connect("day_passed", Callable(self, "_on_day_passed"))
 
 
-
-
 # Connected to day_passed signal of gameclock
 func _on_day_passed(day, month, year) -> void:
 	_update_daily_resources()
 	emit_signal("stats_changed")
+
 
 # Resource updates
 func _update_daily_resources() -> void:
@@ -45,12 +43,14 @@ func _update_daily_resources() -> void:
 	_add_manpower(MANPOWER_GROWTH_DAILY)
 	_update_stability_over_time()
 
+
 # pp stuff 
-func _add_political_power(amount: float) -> void:
+func _add_political_power(amount: int) -> void:
 	political_power += amount
 	political_power = max(political_power, 0.0)
 
-func spend_political_power(amount: float) -> bool:
+
+func spend_political_power(amount: int) -> bool:
 	if political_power < amount:
 		return false
 	political_power -= amount
@@ -72,6 +72,7 @@ func _update_stability_over_time() -> void:
 func _add_money(amount: float) -> void:
 	money += amount
 
+
 func spend_dollars(amount: float) -> bool:
 	if money < amount:
 		return false
@@ -81,6 +82,7 @@ func spend_dollars(amount: float) -> bool:
 
 func _add_manpower(amount: int) -> void:
 	manpower += amount
+
 
 func spend_manpower(amount: int) -> bool:
 	if manpower < amount:
@@ -96,9 +98,9 @@ func setup_player_country(_name: String, _flagName: String) -> void:
 	emit_signal("stats_changed")
 
 
-
-func format_k(number: int) -> String:
+func format_k(number: float) -> String:
 	if number >= 1000:
+		@warning_ignore("integer_division")
 		return str(number / 1000) + "k"
 	else:
 		return str(number)
@@ -113,6 +115,7 @@ func get_stats() -> Dictionary:
 		"stability": stability,
 	}
 
+
 func get_stats_string () -> Dictionary:
 	return {
 		"political_power": str(political_power),
@@ -121,7 +124,7 @@ func get_stats_string () -> Dictionary:
 		"manpower": format_k(manpower)
 		
 	}
-	
+
 
 # Helper
 func get_summary() -> Dictionary:

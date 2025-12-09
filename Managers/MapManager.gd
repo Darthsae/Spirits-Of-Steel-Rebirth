@@ -1,7 +1,10 @@
 extends Node
 
 signal province_hovered(province_id: int, country_name: String)
+
+# NOTE(pol): Only used to communicate with the UI canvas layer
 signal province_clicked(province_id: int, country_name: String)
+
 signal map_ready()
 
 # Emitted when a click couldn't be processed (so likely sea or border)
@@ -32,11 +35,11 @@ const CACHE_FOLDER = "res://map_data/"
 @export var region_texture: Texture2D
 @export var culture_texture: Texture2D
 
-var map_data: MapData
+# NOTE(pol): Unused
+#var map_data: MapData
 
 
 func _ready() -> void:
-
 	var dir = DirAccess.open("res://")
 	if dir:
 		if not dir.dir_exists(CACHE_FOLDER):
@@ -194,7 +197,7 @@ func _build_country_to_provinces():
 
 func _write_id(x: int, y: int, pid: int) -> void:
 	var r = float(pid % 256) / 255.0
-	var g = float(pid / 256) / 255.0
+	var g = pid / 256.0 / 255.0
 	id_map_image.set_pixel(x, y, Color(r, g, 0.0))
 
 func _build_lookup_texture() -> void:
@@ -215,11 +218,11 @@ func _is_sea(c: Color) -> bool:
 func _identify_country(c: Color) -> String:
 	var best = ""
 	var min_dist = 0.05
-	for name in COUNTRY_COLORS:
+	for country_name in COUNTRY_COLORS:
 		var dist = _dist_sq(c, COUNTRY_COLORS[name])
 		if dist < min_dist:
 			min_dist = dist
-			best = name
+			best = country_name
 	return best
 
 func _dist_sq(c1: Color, c2: Color) -> float:

@@ -1,9 +1,9 @@
 # World.gd
 extends Node2D
 
-@onready var map_sprite: Sprite2D = $MapContainer/CultureSprite
-@onready var camera: Camera2D = $Camera2D
-@onready var troop_renderer: Node2D = $MapContainer/TroopRenderer
+@onready var map_sprite: Sprite2D = $MapContainer/CultureSprite as Sprite2D
+@onready var camera: Camera2D = $Camera2D as Camera2D
+@onready var troop_renderer: Node2D = $MapContainer/TroopRenderer as Node2D
 
 const MAP_SHADER = preload("res://shaders/map_shader.gdshader")
 
@@ -16,7 +16,6 @@ func _ready() -> void:
 	
 	if MapManager.id_map_image != null:
 		_on_map_ready()
-	
 
 
 func _on_map_ready() -> void:
@@ -65,11 +64,11 @@ func _on_map_ready() -> void:
 	#PopupManager.show_alert('war', 'netherlands', 'france')
 
 
-func _create_ghost_map(offset: Vector2, material: ShaderMaterial) -> void:
+func _create_ghost_map(offset: Vector2, p_material: ShaderMaterial) -> void:
 	var ghost := Sprite2D.new()
 	ghost.texture = map_sprite.texture
 	ghost.centered = map_sprite.centered
-	ghost.material = material
+	ghost.material = p_material
 	ghost.position = map_sprite.position + offset
 	$MapContainer.add_child(ghost)
 

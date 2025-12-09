@@ -86,6 +86,7 @@ func _on_player_change() -> void:
 	print("UI Player changed to: ", player.country_name) 
 	_on_stats_changed()
 
+
 func _on_province_clicked(pid: int, country: String) -> void:
 	selected_country = country        
 	sidemenu_flag.texture = TroopManager.get_flag(country)
@@ -97,6 +98,7 @@ func _on_province_clicked(pid: int, country: String) -> void:
 		open_menu(MenuContext.WAR)
 	else:
 		open_menu(MenuContext.DIPLOMACY)
+
 
 func toggle_menu(context := MenuContext.SELF) -> void:
 	if is_open:

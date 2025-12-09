@@ -100,7 +100,11 @@ func _perform_selection() -> void:
 			continue
 
 		var label = str(t.divisions)
+		
+		# FIXME(pol): Wtf this is wrong, AI hallucination ?
+		# Must pass in alignment and width before font_size
 		var text_size = font.get_string_size(label, FONT_SIZE_BASE) * inv_zoom
+		
 		var w = flag_size.x + (GAP_BASE * inv_zoom) + text_size.x + (pad * 2)
 		var h = max(flag_size.y, text_size.y) + (pad * 2)
 		var box_size = Vector2(w, h)
@@ -142,6 +146,7 @@ func _check_rect_intersection(selection_rect: Rect2, troop_rect: Rect2, tx: floa
 # ---------------------------
 # Right-click Path Logic (With Split Support)
 # ---------------------------
+# NOTE(pol): Argument should be bool?
 func _handle_right_mouse(event: InputEventMouseButton) -> void:
 	if event.pressed and SelectionManager.is_a_troop_selected():
 		right_dragging = true
@@ -153,7 +158,7 @@ func _handle_right_mouse(event: InputEventMouseButton) -> void:
 		if not right_dragging:
 			return
 			
-		var drag_distance = drag_start.distance_to(get_global_mouse_position())
+		#var drag_distance = drag_start.distance_to(get_global_mouse_position())
 		
 		#if drag_distance < CLICK_THRESHOLD:
 		#Plain right-click → do nothing (or open context menu later)
@@ -236,7 +241,6 @@ func _perform_path_assignment() -> void:
 	
 	for province_idx in range(path_pids.size()):
 		var target_pid = path_pids[province_idx]
-		var target = target_positions[province_idx]
 		
 		# Determine how many divisions go to this province
 		var divs_for_this_province = divisions_per_province

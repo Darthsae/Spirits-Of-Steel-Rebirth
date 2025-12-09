@@ -1,10 +1,10 @@
 # MusicManager.gd
+# NOTE(pol): This is more like a sound API
 extends Node
 
 var music_player: AudioStreamPlayer
 
-
-enum SFX {	
+enum SFX {
 	TROOP_MOVE,
 	TROOP_SELECTED,
 	BATTLE_START,
@@ -33,7 +33,6 @@ var music_volume_map = {
 	MUSIC.BATTLE_THEME: 0.5
 }
 
-
 var sfx_map = {
 	SFX.TROOP_MOVE: preload("res://assets/snd/moveDivSound.mp3"),
 	SFX.TROOP_SELECTED: preload("res://assets/snd/selectDivSound.mp3"),
@@ -52,6 +51,7 @@ var music_map = {
 # *** MULTIPLE SFX SUPPORT ***
 var sfx_players: Array[AudioStreamPlayer] = []
 
+
 func _ready():
 	# Music player
 	music_player = AudioStreamPlayer.new()
@@ -65,6 +65,7 @@ func _ready():
 		player.bus = "SFX"
 		sfx_players.append(player)
 	play_music(MUSIC.MAIN_THEME, true)
+
 
 func play_sfx(sfx: int):
 	if sfx not in sfx_map:
@@ -83,6 +84,7 @@ func play_sfx(sfx: int):
 	player.volume_db = linear_to_db(sfx_volume_map.get(sfx, 1.0))
 	player.play()
 
+
 func play_music(track: int, loop: bool = true):
 	if track not in music_map:
 		return
@@ -91,10 +93,12 @@ func play_music(track: int, loop: bool = true):
 	music_player.volume_db = linear_to_db(music_volume_map.get(track, 1.0))  # Apply track-specific volume
 	music_player.play()
 
+
 # *** BONUS: Stop all SFX ***
 func stop_all_sfx():
 	for player in sfx_players:
 		player.stop()
+
 
 # *** BONUS: Fade out music ***
 func fade_out_music(duration: float = 1.0):
@@ -102,6 +106,7 @@ func fade_out_music(duration: float = 1.0):
 	tween.tween_method(set_music_volume, 1.0, 0.0, duration)
 	await tween.finished
 	music_player.stop()
+
 
 func set_music_volume(volume: float):
 	music_player.volume_db = linear_to_db(volume)

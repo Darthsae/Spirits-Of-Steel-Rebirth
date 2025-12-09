@@ -163,6 +163,7 @@ func _draw_single_troop_visual(troop: TroopData, pos: Vector2, player_country: S
 	
 	# 2. Text Area Calculation
 	var font_size_world = LAYOUT.font_size * scale_factor
+	# FIXME(pol): Must pass in alignment and width before font_size
 	var raw_text_size = _font.get_string_size(label_text, LAYOUT.font_size) * scale_factor
 	
 	# Ensure the text area is at least the minimum width defined in config
@@ -198,7 +199,7 @@ func _draw_single_troop_visual(troop: TroopData, pos: Vector2, player_country: S
 	var draw_pos_x = text_center_x - (raw_text_size.x * 0.5)
 	
 	# Vertical centering
-	var font_ascent = _font.get_ascent(LAYOUT.font_size) * scale_factor
+	#var font_ascent = _font.get_ascent(LAYOUT.font_size) * scale_factor
 	var text_y_center = box_rect.position.y + (total_height * 0.5)
 	var text_y_baseline = text_y_center + (raw_text_size.y * 0.25)
 	

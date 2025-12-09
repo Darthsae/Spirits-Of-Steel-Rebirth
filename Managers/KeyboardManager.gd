@@ -1,9 +1,11 @@
 # KeyboardManager.gd
+# NOTE(pol): WHAT IS THE POINT OF THIS SCRIPT !?
 extends Node
 
 signal toggle_menu()
 
 var _debounce := false
+
 
 func _process(_delta: float) -> void:
 	if Input.is_action_just_pressed("open_menu") and not _debounce:

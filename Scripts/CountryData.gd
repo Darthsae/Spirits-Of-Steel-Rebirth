@@ -11,7 +11,7 @@ var manpower: int = 50000
 var stability: float = 0.75
 
 # --- Daily Gains ---
-var daily_pp_gain: float = 2
+var daily_pp_gain: int = 2
 var daily_money_income: float = 1000
 var daily_manpower_growth: int = 600
 
@@ -23,7 +23,6 @@ func process_turn() -> void:
 	political_power += daily_pp_gain
 	money += (daily_money_income - calculate_army_upkeep())
 	manpower += daily_manpower_growth
-	
 	
 	# Stability logic
 	var target := 0.75
