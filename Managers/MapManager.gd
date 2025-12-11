@@ -27,14 +27,13 @@ var original_hover_color: Color
 var province_centers: Dictionary = {} # Stores {ID: Vector2(x, y)}
 var adjacency_list: Dictionary = {} # Stores {ID: [Neighbor_ID_1, Neighbor_ID_2, ...]}	
 
-# MapManager.gd
 const MAP_DATA_PATH = "res://map_data/MapData.tres"
 const CACHE_FOLDER = "res://map_data/"
 
 @export var region_texture: Texture2D
 @export var culture_texture: Texture2D
 
-# NOTE(pol): Unused
+# NOTE(pol): Unused var
 #var map_data: MapData
 
 
@@ -108,6 +107,7 @@ func _try_load_cached_data() -> bool:
 	MapDebugOverlay.set_centers(province_centers)
 
 	return true
+
 
 func initialize_map(region_tex: Texture2D, culture_tex: Texture2D) -> void:
 	var r_img = region_tex.get_image()
@@ -194,10 +194,12 @@ func _build_country_to_provinces():
 	country_to_provinces = result
 	return
 
+
 func _write_id(x: int, y: int, pid: int) -> void:
 	var r = float(pid % 256) / 255.0
 	var g = pid / 256.0 / 255.0
 	id_map_image.set_pixel(x, y, Color(r, g, 0.0))
+
 
 func _build_lookup_texture() -> void:
 	state_color_image = Image.create(max_province_id + 2, 1, false, Image.FORMAT_RGBA8)
@@ -209,10 +211,12 @@ func _build_lookup_texture() -> void:
 		state_color_image.set_pixel(pid, 0, col)
 	state_color_texture = ImageTexture.create_from_image(state_color_image)
 
+
 func _is_sea(c: Color) -> bool:
 	# Check BOTH the Main sea color AND the Raster color
 	# If it matches either, it is ID 0 (Untouched)
 	return _dist_sq(c, SEA_MAIN) < 0.001 or _dist_sq(c, SEA_RASTER) < 0.001
+
 
 func _identify_country(c: Color) -> String:
 	var best = ""
@@ -224,10 +228,10 @@ func _identify_country(c: Color) -> String:
 			best = country_name
 	return best
 
+
 func _dist_sq(c1: Color, c2: Color) -> float:
 	return (c1.r-c2.r)**2 + (c1.g-c2.g)**2 + (c1.b-c2.b)**2
 
-# MapManager.gd
 
 func update_province_color(pid: int, country_name: String) -> void:
 	if pid <= 1 or pid > max_province_id:
@@ -249,6 +253,8 @@ func update_province_color(pid: int, country_name: String) -> void:
 	# The actual map data change (province_to_country and country_to_provinces)
 	# is handled by the WarManager for centralized logic, but the visual update
 	# is handled here.
+
+
 func get_province_at_pos(pos: Vector2, map_sprite: Sprite2D = null) -> int:
 	if not id_map_image: return 0
 	
@@ -284,6 +290,7 @@ func get_province_at_pos(pos: Vector2, map_sprite: Sprite2D = null) -> int:
 	var g = int(round(c.g * 255.0))
 	return r + (g * 256)
 
+
 func update_hover(global_pos: Vector2, map_sprite: Sprite2D) -> void:
 	if _is_mouse_over_ui():         
 		if last_hovered_pid > 1:
@@ -292,6 +299,8 @@ func update_hover(global_pos: Vector2, map_sprite: Sprite2D) -> void:
 		return
 	
 	var pid = get_province_at_pos(global_pos, map_sprite)
+	print(pid)
+
 	if pid != last_hovered_pid:
 		if last_hovered_pid > 1:
 			_update_lookup(last_hovered_pid, original_hover_color)
@@ -301,7 +310,6 @@ func update_hover(global_pos: Vector2, map_sprite: Sprite2D) -> void:
 			original_hover_color = col
 			_update_lookup(pid, col + Color(0.15, 0.15, 0.15, 0))
 		province_hovered.emit(pid, province_to_country.get(pid, ""))
-
 
 
 func handle_click(global_pos: Vector2, map_sprite: Sprite2D) -> void:
@@ -315,7 +323,8 @@ func handle_click(global_pos: Vector2, map_sprite: Sprite2D) -> void:
 		province_clicked.emit(pid, province_to_country.get(pid, ""))
 	else:
 		emit_signal("close_sidemenu")
-		
+
+
 # To probe around and still register a click if we hit province/coutnry border
 func get_province_with_radius(center: Vector2, map_sprite: Sprite2D, radius: int) -> int:
 	var offsets = [
@@ -335,13 +344,13 @@ func get_province_with_radius(center: Vector2, map_sprite: Sprite2D, radius: int
 		if pid > 1:
 			return pid
 
-	return -1		
+	return -1
+
 
 func _update_lookup(pid: int, color: Color) -> void:
 	state_color_image.set_pixel(pid, 0, color)
 	state_color_texture.update(state_color_image)
 
-# MapManager.gd
 
 func _calculate_province_centroids() -> void:
 	# Use a dictionary to accumulate data: {ID: [total_x, total_y, pixel_count]}
@@ -380,7 +389,6 @@ func _calculate_province_centroids() -> void:
 
 
 # === FIXED ADJACENCY + PATHFINDING ===
-
 func _build_adjacency_list() -> void:
 	var w = id_map_image.get_width()
 	var h = id_map_image.get_height()
@@ -453,7 +461,6 @@ func _scan_across_border(x: int, y: int, pid: int) -> int:
 	return -1
 
 
-
 # Faster direct pid fetch
 func _get_pid_fast(x: int, y: int) -> int:
 	var c = id_map_image.get_pixel(x, y)
@@ -494,7 +501,6 @@ func find_path(start_pid: int, end_pid: int, allowed_countries: Array[String] = 
 	return path
 
 func _find_path_astar(start_pid: int, end_pid: int, allowed_countries: Array[String]) -> Array[int]:
-	
 	# 1. Optimize Allowed Check: Convert Array to Dictionary for O(1) lookup
 	var allowed_dict = {}
 	var restricted_mode = not allowed_countries.is_empty()
@@ -602,14 +608,13 @@ func _reconstruct_path(came_from: Dictionary, current: int) -> Array[int]:
 	return path
 
 
-const INF = 999999.0
-
-
 func get_path_length(path: Array[int]) -> int:
 	return path.size() - 1 if path.size() > 1 else 0
 
+
 func is_path_possible(start_pid: int, end_pid: int) -> bool:
 	return not find_path(start_pid, end_pid).is_empty()
+
 
 func get_distance(start_pid: int, end_pid: int) -> int:
 	var path = find_path(start_pid, end_pid)
@@ -623,23 +628,28 @@ func find_path_with_ports(start_pid: int, end_pid: int, ports: Dictionary = {}) 
 	# For now, just calls land-only pathfinder
 	return find_path(start_pid, end_pid)
 
+
 # --- CACHE MANAGEMENT ---
 func clear_path_cache() -> void:
 	"""Clear the path cache if needed (e.g., when map changes)"""
 	path_cache.clear()
 	print("Path cache cleared!")
 
+
 func get_cache_size() -> int:
 	"""Get number of cached paths"""
 	return path_cache.size()
+
 
 func print_cache_stats() -> void:
 	"""Print cache statistics"""
 	print("Path Cache Stats: %d paths cached" % path_cache.size())
 
+
 func _is_mouse_over_ui() -> bool:
 	var hovered = get_viewport().gui_get_hovered_control()
 	return hovered != null
+
 
 # Your color → country definition
 const COUNTRY_COLORS := {
