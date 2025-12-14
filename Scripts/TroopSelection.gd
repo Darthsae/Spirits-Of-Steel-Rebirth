@@ -145,7 +145,6 @@ func _check_rect_intersection(selection_rect: Rect2, troop_rect: Rect2, tx: floa
 # ---------------------------
 # Right-click Path Logic (With Split Support)
 # ---------------------------
-# NOTE(pol): Argument should be bool?
 func _handle_right_mouse(event: InputEventMouseButton) -> void:
 	if event.pressed and SelectionManager.is_a_troop_selected():
 		right_dragging = true

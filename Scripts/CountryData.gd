@@ -9,6 +9,8 @@ var money: float = 1000.0
 var manpower: int = 50000
 var stability: float = 0.75
 
+# for later 
+var war_support: float = 0.5
 # --- Daily Gains ---
 var daily_pp_gain: int = 2
 var daily_money_income: float = 1000

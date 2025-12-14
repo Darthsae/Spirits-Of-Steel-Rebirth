@@ -44,7 +44,8 @@ const GHOST_MARGIN := 10.0
 # ==============================================================================
 
 var _font: Font = preload("res://font/TTT-Regular.otf")
-
+const BATTLE_ICON: Texture2D = preload("res://assets/icons/battle_element_transparent.png")
+var BATTLE_ICON_SIZE: Vector2 = BATTLE_ICON.get_size()
 # External Dependencies
 var map_sprite: Sprite2D
 var map_width: float = 0.0
@@ -109,10 +110,21 @@ func _draw() -> void:
 				var scroll_offset = Vector2(map_width * j, 0)
 				_draw_single_troop_visual(t, offset_pos + scroll_offset, player_country)
 	
-	for battle in WarManager.active_battles:
-		var battle_draw_position = battle.position - map_offset     
-		draw_circle(battle_draw_position, 1, Color.RED)
 
+		for battle in WarManager.active_battles:
+			var pos = battle.position - map_offset
+			var tex := BATTLE_ICON
+			var size := tex.get_size() * 0.05
+			var draw_pos = pos - size * 0.5
+
+			var p = battle.get_player_relative_progress(CountryManager.player_country.country_name)
+
+			var color := Color(0, 1, 0, 1) if p >= 0.0 else Color(1, 0, 0, 1)
+			draw_circle(pos, 1.3, color)
+
+			draw_texture_rect(tex, Rect2(draw_pos, size), false)
+
+		
 
 func _group_troops_by_position(troops: Array, radius: float) -> Dictionary:
 	var groups = {}
