@@ -9,15 +9,21 @@ var money: float = 1000.0
 var manpower: int = 50000
 var stability: float = 0.75
 
+# for later 
+var war_support: float = 0.5
 # --- Daily Gains ---
 var daily_pp_gain: int = 2
 var daily_money_income: float = 1000
 var daily_manpower_growth: int = 600
 
 
+var allowedCountries: Array[String] = [] # for pathfinding (country names)
+
+
 func _init(p_name: String) -> void:
 	country_name = p_name
-
+	self.name = p_name 
+	allowedCountries.append(p_name)
 
 # Called by country manager
 func process_turn() -> void:

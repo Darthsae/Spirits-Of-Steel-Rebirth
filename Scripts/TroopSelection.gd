@@ -8,7 +8,7 @@ var font: Font = preload("res://font/TTT-Regular.otf")
 const TROOP_DATA_TYPE = preload("res://Scripts/TroopData.gd")
 
 # --- Constants ---
-const FLAG_WIDTH_BASE := 32.0
+const FLAG_WIDTH_BASE := 24.0
 const FLAG_HEIGHT_BASE := 20.0
 const PADDING_BASE := 6.0
 const GAP_BASE := 8.0
@@ -148,7 +148,6 @@ func _check_rect_intersection(selection_rect: Rect2, troop_rect: Rect2, tx: floa
 # ---------------------------
 # Right-click Path Logic (With Split Support)
 # ---------------------------
-# NOTE(pol): Argument should be bool?
 func _handle_right_mouse(event: InputEventMouseButton) -> void:
 	if event.pressed and SelectionManager.is_a_troop_selected():
 		right_dragging = true

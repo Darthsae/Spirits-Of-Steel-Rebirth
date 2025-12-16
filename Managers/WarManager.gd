@@ -1,377 +1,285 @@
 extends Node
 
-# --- CONFIGURATION ---
-const BATTLE_TICK_RATE := 1.0   # Damage applied every 1.0 "game seconds"
-const DAMAGE_PER_DIVISION := 0.25 # Damage factor
-const MIN_DIVS_TO_ATTACK := 1
-const REINFORCE_RANGE_SQ := 8000.0 * 8000.0
+const BATTLE_TICK := 5
+const PROGRESS_MAX := 99.0
 
-# --- STATE ---
-var war_pairs: Array = []
-var reserved_provinces: Dictionary = {} # { province_id: country_name }
+# TODO: Countries should determine this individually
+const MORALE_INITIAL := 83
+const MORALE_DECAY_RATE := 0.05
+const BASE_DAMAGE_DIVISIONS := 1
+const MORALE_BOOST_DEFENDER := 5.0 
+const HP_PER_DIVISION = 10
 
-# Dictionary of { province_id: Battle }
-# Now stores Battle instances instead of raw dictionaries
-var active_battles: Dictionary = {} 
-
+var wars := {} 
+var active_battles := []
 var time_scale := 1.0
 
-# =============================================================
-#  INNER CLASS: BATTLE INSTANCE
-#  (Encapsulates logic for a single battle)
-# =============================================================
+const AI_TICK_INTERVAL := 5.0
+var ai_timer := 0.0
+
 class Battle:
-	var province_id: int
-	var participants: Array = []  # [String, String] - country names
-	var timer: float = 0.0
-	var manager: Node  # Reference to your WarManager
+	var attacker_pid: int
+	var defender_pid: int
+	var attacker_country: String
+	var defender_country: String
 
-	func _init(pid: int, country_a: String, country_b: String, p_manager: Node) -> void:
-		province_id = pid
-		participants = [country_a, country_b]
-		manager = p_manager
-		_print_battle_start()
+	var attack_progress := 0.0
+	var att_morale: float
+	var def_morale: float
 
-	func _print_battle_start() -> void:
-		print_rich("[color=yellow]════════════════════════════════════════════════════════════════[/color]")
-		print_rich("[color=orange][b]BATTLE STARTED[/b][/color] → Province [b]%d[/b]" % province_id)
-		print_rich("       [color=cyan][b]%s[/b][/color]  ⚔  [color=red][b]%s[/b][/color]" % [participants[0], participants[1]])
-		print_rich("[color=yellow]════════════════════════════════════════════════════════════════[/color]")
+	var province_hp: float
+	var province_max_hp: float
 
-	# Called every frame by WarManager
-	func tick(delta: float) -> void:
+	var total_initial_strength: float
+	var timer := 0.0
+	var position: Vector2
+	var manager
+
+	func _init(atk_pid: int, def_pid: int, atk_c: String, def_c: String, pos: Vector2, m):
+		attacker_pid = atk_pid
+		defender_pid = def_pid
+		attacker_country = atk_c
+		defender_country = def_c
+		position = pos
+		manager = m
+
+		var att_divs = _get_divisions(attacker_pid, attacker_country)
+		var def_divs = _get_divisions(defender_pid, defender_country)
+
+		total_initial_strength = max(1.0, att_divs + def_divs)
+
+		province_max_hp = max(1.0, def_divs * manager.HP_PER_DIVISION)
+		province_hp = province_max_hp
+
+		att_morale = manager.MORALE_INITIAL
+		def_morale = manager.MORALE_INITIAL + manager.MORALE_BOOST_DEFENDER
+
+	func tick(delta: float):
 		timer += delta
-		if timer >= manager.BATTLE_TICK_RATE:
-			timer -= manager.BATTLE_TICK_RATE  # subtract instead of reset for accuracy
+		if timer >= manager.BATTLE_TICK:
+			timer -= manager.BATTLE_TICK
 			_resolve_round()
 
-	func _resolve_round() -> void:
-		var all_troops = TroopManager.get_troops_in_province(province_id)
-		
-		var group_a = all_troops.filter(func(t): return t.country_name == participants[0])
-		var group_b = all_troops.filter(func(t): return t.country_name == participants[1])
-		
-		var total_a = group_a.reduce(func(acc, t): return acc + t.divisions, 0)
-		var total_b = group_b.reduce(func(acc, t): return acc + t.divisions, 0)
-		
-		print_rich("\n[color=purple]▛▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▜[/color]")
-		print_rich("[color=purple]                 BATTLE ROUND - Province %d                 [/color]" % province_id)
-		print_rich("[color=cyan]%s[/color]: [b]%d[/b] divisions   |   [color=red]%s[/color]: [b]%d[/b] divisions" % [participants[0], total_a, participants[1], total_b])
-		
-		# Check for victory
-		if total_a <= 0:
-			_print_victory(participants[1])
-			manager._end_battle(province_id)
+	func _resolve_round():
+		var att_divs = _get_divisions(attacker_pid, attacker_country)
+		var def_divs = _get_divisions(defender_pid, defender_country)
+
+		if att_divs <= 0:
+			manager.end_battle(self)
 			return
-		if total_b <= 0:
-			_print_victory(participants[0])
-			manager._end_battle(province_id)
-			return
-		
-		# Calculate damage per tick
-		var damage_from_a := _calc_dps(group_a)
-		var damage_from_b := _calc_dps(group_b)
-		
-		print_rich("[color=cyan]%s[/color] → deals [b]%.2f[/b] damage" % [participants[0], damage_from_a])
-		print_rich("[color=red]%s[/color] → deals [b]%.2f[/b] damage" % [participants[1], damage_from_b])
-		
-		# Apply damage
-		_apply_damage(group_a, damage_from_b, participants[1])
-		_apply_damage(group_b, damage_from_a, participants[0])
 
-	func _calc_dps(troops: Array) -> float:
-		var total_divisions := 0
-		for troop in troops:
-			total_divisions += troop.divisions
-		return float(total_divisions) * manager.DAMAGE_PER_DIVISION
+		# --- Effective combat power ---
+		var att_ecp = att_divs * att_morale / manager.MORALE_INITIAL
+		var def_ecp = def_divs * def_morale / manager.MORALE_INITIAL * 1.2
+		var total_ecp = max(1.0, att_ecp + def_ecp)
 
-	func _apply_damage(target_troops: Array, damage: float, attacker: String) -> void:
-		if damage <= 0.0 or target_troops.is_empty():
-			return
-		
-		var remaining_damage: float = damage
-		
-		for troop in target_troops:
-			if remaining_damage <= 0.0:
-				break
-				
-			var before = troop.divisions
-			
-			if float(troop.divisions) <= remaining_damage:
-				# Entire stack dies
-				remaining_damage -= troop.divisions
-				troop.divisions = 0
-				TroopManager.remove_troop_by_war(troop)
-				print_rich("  [color=red][b]DEATH[/b][/color] %s's unit in province %d wiped out by %s (%d → 0)" % [troop.country_name, province_id, attacker, before])
-			else:
-				# Partial kill with proper rounding
-				var kill_count := int(remaining_damage)
-				if randf() < (remaining_damage - kill_count):
-					kill_count += 1
-				
-				troop.divisions -= kill_count
-				remaining_damage = 0.0
-				
-				print_rich("  [color=orange]-[/color][b]%d[/b]  %s lost %d divisions (%d → %d) to %s" % [kill_count, troop.country_name, kill_count, before, troop.divisions, attacker])
-				
-				if troop.divisions <= 0:
-					troop.divisions = 0
-					TroopManager.remove_troop_by_war(troop)
-					print_rich("  [color=red][b]DEATH[/b][/color] %s's unit destroyed after combat rounding!" % troop.country_name)
+		# --- Province HP damage ---
+		province_hp -= att_ecp * manager.BASE_DAMAGE_DIVISIONS
+		province_hp = max(0.0, province_hp)
 
-	func _print_victory(winner: String) -> void:
-		print_rich("[color=lime]▛▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▀▜[/color]")
-		print_rich("[color=lime]                   VICTORY! %s WINS                    [/color]" % winner.to_upper())
-		print_rich("[color=lime]             Province %d is now under %s control!            [/color]" % [province_id, winner])
-		print_rich("[color=lime]▙▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▄▟[/color]\n")
+		# --- Morale ---
+		att_morale = max(0.0, att_morale - def_ecp * manager.MORALE_DECAY_RATE)
+		def_morale = max(0.0, def_morale - att_ecp * manager.MORALE_DECAY_RATE)
 
-# =============================================================
-# LIFECYCLE
-# =============================================================
-func _ready() -> void:
-	set_process(true)
+		# --- Progress ---
+		attack_progress += (att_ecp - def_ecp) / total_initial_strength * 10.0
+		attack_progress = clamp(
+			attack_progress,
+			-manager.PROGRESS_MAX,
+			manager.PROGRESS_MAX
+		)
+
+		# --- Victory conditions ---
+		if province_hp <= 0 or def_morale <= 1.0:
+			_defender_loses()
+		elif att_morale <= 1.0:
+			manager.end_battle(self)
+
+	func _defender_loses():
+		var troops = TroopManager.get_troops_in_province(defender_pid)
+
+		for t in troops:
+			if t.country_name != defender_country:
+				continue
+
+			if t.divisions <= 1:
+				TroopManager.remove_troop_by_war(t)
+				continue
+
+			var retreat_pid = _find_retreat_province(defender_pid, defender_country)
+
+			# 50% chance to retreat or die
+			if retreat_pid == -1 or randf() < 0.5:
+				TroopManager.remove_troop_by_war(t)
+				continue
+
+			# Otherwise retreat
+			t.divisions = max(1, int(t.divisions * 0.5))
+			TroopManager.teleport_troop_to_province(t, retreat_pid)
+
+
+		manager.conquer_province(defender_pid, attacker_country)
+		manager.end_battle(self)
+
+	func _find_retreat_province(from_pid: int, country: String) -> int:
+		if not MapManager.adjacency_list.has(from_pid):
+			return -1
+
+		for n in MapManager.adjacency_list[from_pid]:
+			var province_troops = TroopManager.troops_by_province.get(n, [])
+			# Check if there are no troops from the same country in the province
+			if province_troops.size() == 0 and MapManager.province_to_country[n] == country:
+				return n
+
+		return -1
+
+
+	func _get_divisions(pid: int, country: String) -> float:
+		return float(TroopManager.get_province_strength(pid, country))
+
+	func get_player_relative_progress(player_country: String) -> float:
+		return attack_progress if attacker_country == player_country else -attack_progress
+
+
+
+# --- LIFECYCLE ---
+func _ready():
 	if MainClock:
-		MainClock.hour_passed.connect(_on_ai_tick)
-		MainClock.time_scale_changed.connect(_on_time_scale_changed)
 		time_scale = MainClock.time_scale
+		MainClock.time_scale_changed.connect(func(s): time_scale = s)
 
-func _on_time_scale_changed(new_scale: float) -> void:
-	time_scale = new_scale
-
-# =============================================================
-# GAME LOOP (Time-Scaled Battles)
-# =============================================================
-func _process(delta: float) -> void:
+func _process(delta: float):
+	
+	
+	if wars.is_empty(): return
+	var scaled = delta * time_scale
+	ai_timer += scaled
+	if ai_timer >= AI_TICK_INTERVAL:
+		ai_timer -= AI_TICK_INTERVAL
+		_ai_decision_tick()
+	
 	if active_battles.is_empty(): return
+	for battle in active_battles:
+		battle.tick(scaled)
+		
 
-	# Scale delta by game speed
-	var game_delta = delta * time_scale
 	
-	# Iterate a copy of keys to allow modifying dictionary safely
-	var ongoing_battles = active_battles.keys()
-	
-	for pid in ongoing_battles:
-		if active_battles.has(pid):
-			# Delegate logic to the Battle instance
-			active_battles[pid].tick(game_delta)
-
-# =============================================================
-# COMBAT LOGIC
-# =============================================================
-
-# Called by TroopManager when a troop enters a province
-func resolve_province_conflict(province_id: int) -> void:
-	# If battle exists, just ensure this new troop stops moving
-	if active_battles.has(province_id):
-		_lock_troops_in_province(province_id)
+func _ai_decision_tick():
+	if not CountryManager or not TroopManager or not MapManager:
 		return
 
-	var local_troops = TroopManager.get_troops_in_province(province_id)
-	if local_troops.size() < 2:
-		_finish_province_actions(province_id)
-		return
+	# Loop over all countries currently at war
+	for ai_country_data in wars.keys():
+		var ai_country = ai_country_data.name
+		if ai_country == CountryManager.player_country.country_name:
+			continue
 
-	# Check for hostile factions
-	var countries = _get_countries_in_province(local_troops)
-	for i in range(countries.size()):
-		for j in range(i + 1, countries.size()):
-			var a = countries[i]
-			var b = countries[j]
-			if is_at_war(a, b):
-				_start_battle(province_id, a, b)
-				return
+		var ai_troops = TroopManager.get_troops_for_country(ai_country)
+		if ai_troops.is_empty(): continue
 
-func _start_battle(pid: int, country_a: String, country_b: String) -> void:
-	print("⚔️ Battle started at %d [%s vs %s]" % [pid, country_a, country_b])
+		# Only consider idle troops
+		var idle_troops = ai_troops.filter(func(t): return not t.is_moving)
+		if idle_troops.is_empty(): continue
+
+		# --- Step 1: Collect enemy provinces (provinces with troops of a country AI is at war with) ---
+		var enemy_targets: Array = []
+		var empty_targets: Array = []
+
+		for prov in MapManager.province_to_country.keys():
+			var owner = MapManager.province_to_country[prov]
+			var troops_here = TroopManager.get_troops_in_province(prov)
+
+			if owner != ai_country and is_at_war_names(ai_country, owner):
+				# Add only if there are enemy troops
+				if troops_here.size() > 0:
+					enemy_targets.append(prov)
+			elif owner == ai_country and troops_here.size() == 0:
+				# Empty province in AI territory
+				empty_targets.append(prov)
+
+		# If there are no targets, skip
+		if enemy_targets.is_empty() and empty_targets.is_empty():
+			continue
+
+		# --- Step 2: Prioritize enemy targets first ---
+		var targets: Array = enemy_targets.duplicate()
+		targets += empty_targets  # append empty provinces after enemy provinces
+
+		# --- Step 3: Split idle troops across targets ---
+		var num_targets = targets.size()
+		var base_divisions = idle_troops.size() / num_targets
+		var remainder = idle_troops.size() % num_targets
+
+		var troop_index = 0
+		for target_pid in targets:
+			var num_to_send = base_divisions
+			if remainder > 0:
+				num_to_send += 1
+				remainder -= 1
+
+			for i in range(num_to_send):
+				if troop_index >= idle_troops.size():
+					break
+				var troop = idle_troops[troop_index]
+				troop_index += 1
+				TroopManager.order_move_troop(troop, target_pid)
+
+
+
+
+
+
+func apply_casualties(pid: int, country: String, damage_divisions: float):
+	var troops_list = TroopManager.get_troops_in_province(pid).filter(func(t): return t.country_name == country)
+	if troops_list.is_empty() or damage_divisions <= 0: return
 	
-	# Create the Battle Instance
-	var new_battle = Battle.new(pid, country_a, country_b, self)
-	active_battles[pid] = new_battle
+	var total_divisions = float(TroopManager.get_province_strength(pid, country))
 	
-	_lock_troops_in_province(pid)
-	# Optional: Visuals
-	# if MapManager: MapManager.add_battle_icon(pid)
-
-func _end_battle(pid: int) -> void:
-	active_battles.erase(pid)
-	call_deferred("_finish_province_actions", pid)
-	print("🏁 Battle ended at %d" % pid)
-	# if MapManager: MapManager.remove_battle_icon(pid)
-
-func _lock_troops_in_province(pid: int) -> void:
-	var troops = TroopManager.get_troops_in_province(pid)
-	for t in troops:
-		if t.is_moving:
-			TroopManager._stop_troop(t)
-
-# =============================================================
-# AI ORCHESTRATION
-# =============================================================
-func _on_ai_tick(_hour: int = 0) -> void:
-	var all_countries = MapManager.country_to_provinces.keys()
-	var player_country = CountryManager.player_country.country_name if CountryManager else ""
-
-	for country in all_countries:
-		if country == player_country: continue
-		var enemies = get_enemies(country)
-		if enemies.is_empty(): continue
-
-		_orchestrate_ai_country(country, enemies)
-
-func _orchestrate_ai_country(country: String, enemies: Array) -> void:
-	var my_troops = TroopManager.get_troops_for_country(country)
-	var available_troops = my_troops.filter(func(t): return not t.is_moving and not _is_troop_in_battle(t))
-	
-	if available_troops.is_empty(): return
-
-	# Priority 1: Reinforce Active Battles
-	var battle_targets = _find_active_battles_near_me(country, available_troops)
-	
-	# Priority 2: Attack Empty/Weak Enemy Provinces
-	var attack_targets = []
-	if battle_targets.is_empty():
-		attack_targets = _find_weak_targets(country, enemies)
-
-	# Execute Moves
-	var payload: Array = []
-	
-	for troop in available_troops:
-		if troop.divisions < MIN_DIVS_TO_ATTACK: continue
+	# Distribute damage proportionally
+	for t in troops_list:
+		var troop_proportion = t.divisions / total_divisions if total_divisions > 0 else 0
+		var damage = damage_divisions * troop_proportion
+		t.divisions -= damage
 		
-		var target_pid = -1
-		
-		if not battle_targets.is_empty():
-			target_pid = _get_closest_pid(troop.position, battle_targets)
-		elif not attack_targets.is_empty():
-			target_pid = _get_closest_pid(troop.position, attack_targets)
+		if t.divisions <= 0:
+			t.divisions = 0
+			TroopManager.remove_troop_by_war(t)
 			
-		if target_pid != -1:
-			if reserved_provinces.get(target_pid) != country:
-				reserved_provinces[target_pid] = country
-				payload.append({ "troop": troop, "province_id": target_pid })
 
-	if not payload.is_empty():
-		TroopManager.command_move_assigned(payload)
 
-# AI Helper: Find battles involving 'country' or enemies
-func _find_active_battles_near_me(country: String, troops: Array) -> Array:
-	var targets = []
-	for pid in active_battles.keys():
-		var battle = active_battles[pid] # This is now a Battle object
-		var participants = battle.participants
-		
-		if participants.has(country) or is_at_war(participants[0], country) or is_at_war(participants[1], country):
-			targets.append(pid)
-	return targets
+# --- API ---
+func start_battle(attacker_pid: int, defender_pid: int):
+	# Prevent duplicates
+	for b in active_battles:
+		if b.attacker_pid == attacker_pid and b.defender_pid == defender_pid: return
 
-func _find_weak_targets(country: String, enemies: Array) -> Array:
-	var targets = []
-	for enemy in enemies:
-		var provs = MapManager.country_to_provinces.get(enemy, [])
-		targets.append_array(provs)
-	return targets
-
-func _get_closest_pid(from_pos: Vector2, pids: Array) -> int:
-	var best_pid = -1
-	var min_dist = INF
-	for pid in pids:
-		var pos = MapManager.province_centers.get(pid, Vector2.ZERO)
-		var d = from_pos.distance_squared_to(pos)
-		if d < min_dist:
-			min_dist = d
-			best_pid = pid
-	return best_pid
-
-# =============================================================
-# PUBLIC HELPERS & API
-# =============================================================
-
-## Returns true if the specific troop is in an active battle
-func _is_troop_in_battle(troop: TroopData) -> bool:
-	return active_battles.has(troop.province_id)
-
-## Returns battle stats for UI or Logic
-func get_troop_battle_info(troop: TroopData) -> Variant:
-	if not active_battles.has(troop.province_id):
-		return null
-		
-	var battle = active_battles[troop.province_id] # Battle Object
-	var my_country = troop.country_name
-	var enemy_country = ""
+	var att_troops = TroopManager.get_troops_in_province(attacker_pid)
+	var def_troops = TroopManager.get_troops_in_province(defender_pid)
 	
-	if battle.participants[0] == my_country: enemy_country = battle.participants[1]
-	else: enemy_country = battle.participants[0]
+	if att_troops.is_empty() or def_troops.is_empty(): return
+
+	var atk_country = att_troops[0].country_name
+	var def_country = def_troops[0].country_name
+	var midpoint = get_province_midpoint(attacker_pid, defender_pid)
 	
-	# Calculate balance of power dynamically
-	var local_troops = TroopManager.get_troops_in_province(troop.province_id)
-	var my_power = 0
-	var enemy_power = 0
-	
-	for t in local_troops:
-		if t.country_name == my_country: my_power += t.divisions
-		elif t.country_name == enemy_country: enemy_power += t.divisions
-		
-	return {
-		"is_fighting": true,
-		"location": troop.province_id,
-		"enemy_country": enemy_country,
-		"my_total_divisions": my_power,
-		"enemy_total_divisions": enemy_power,
-		"is_winning": my_power > enemy_power
-	}
+	var battle = Battle.new(attacker_pid, defender_pid, atk_country, def_country, midpoint, self)
+	active_battles.append(battle)
 
-# =============================================================
-# DIPLOMACY & CONQUEST (Preserved Functions)
-# =============================================================
-
-func declare_war(country_a: String, country_b: String) -> void:
-	if country_a == country_b: return
-	var sorted_pair = [country_a, country_b]
-	sorted_pair.sort()
-	if not is_at_war(country_a, country_b):
-		war_pairs.append(sorted_pair)
-		PopupManager.show_alert("war", country_a, country_b)
-		MusicManager.play_sfx(MusicManager.SFX.DECLARE_WAR)
-		MusicManager.play_music(MusicManager.MUSIC.BATTLE_THEME)
-
-func is_at_war(country_a: String, country_b: String) -> bool:
-	var pair = [country_a, country_b]
-	pair.sort()
-	return pair in war_pairs
-
-# --- PRESERVED GET_ENEMIES FUNCTION ---
-func get_enemies(country: String) -> Array[String]:
-	var enemies: Array[String] = []
-	for pair in war_pairs:
-		if pair[0] == country: enemies.append(pair[1])
-		elif pair[1] == country: enemies.append(pair[0])
-	return enemies
-
-func _get_countries_in_province(troops: Array) -> Array:
-	var countries: Array = []
-	for t in troops:
-		if not countries.has(t.country_name):
-			countries.append(t.country_name)
-	return countries
-
-func _finish_province_actions(pid: int) -> void:
-	if active_battles.has(pid): return # Safety check
-	
-	var troops = TroopManager.get_troops_in_province(pid)
-	if reserved_provinces.has(pid): reserved_provinces.erase(pid)
-	if troops.is_empty(): return
-
-	var dominant = troops[0].country_name
-	for t in troops:
-		if t.country_name != dominant: return # Still mixed, shouldn't happen here
-
+func resolve_province_arrival(pid: int, troop: TroopData):
 	var owner = MapManager.province_to_country.get(pid)
-	# Conquest logic: If I occupy it, and I'm at war with owner (or it's neutral)
-	if dominant != owner and (is_at_war(dominant, owner) or owner == "Neutral"):
-		_update_map_ownership(pid, dominant)
+	if owner != troop.country_name and is_at_war_names(troop.country_name, owner):
+		var enemies = TroopManager.get_province_strength(pid, owner)
+		if enemies <= 0:
+			conquer_province(pid, troop.country_name)
 
-func _update_map_ownership(pid: int, new_owner: String) -> void:
+func end_battle(battle: Battle):
+	active_battles.erase(battle)
+
+func conquer_province(pid: int, new_owner: String):
 	var old_owner = MapManager.province_to_country.get(pid)
+	if old_owner == new_owner: return
+
+	# Data Update
 	if MapManager.country_to_provinces.has(old_owner):
 		MapManager.country_to_provinces[old_owner].erase(pid)
 
@@ -380,5 +288,41 @@ func _update_map_ownership(pid: int, new_owner: String) -> void:
 		MapManager.country_to_provinces[new_owner] = []
 	MapManager.country_to_provinces[new_owner].append(pid)
 
-	if MapManager.has_method("update_province_color"):
-		MapManager.update_province_color(pid, new_owner)
+	# Visuals
+	MapManager.update_province_color(pid, new_owner)
+	
+
+
+# --- WAR STATE UTILS ---
+func declare_war(a: CountryData, b: CountryData) -> void:
+	add_war_silent(a, b)
+	if PopupManager: PopupManager.show_alert("war", a, b)
+	if MusicManager: 
+		MusicManager.play_sfx(MusicManager.SFX.DECLARE_WAR)
+		MusicManager.play_music(MusicManager.MUSIC.BATTLE_THEME)
+
+func is_at_war(a: CountryData, b: CountryData) -> bool:
+	return wars.has(a) and wars[a].has(b)
+
+func is_at_war_names(a_name: String, b_name: String) -> bool:
+	if not CountryManager: return false
+	var a_data = CountryManager.get_country(a_name)
+	var b_data = CountryManager.get_country(b_name)
+	if a_data and b_data: return is_at_war(a_data, b_data)
+	return false
+
+func add_war_silent(a: CountryData, b: CountryData) -> void:
+	if a == b or is_at_war(a, b): return
+	if not wars.has(a): wars[a] = {}
+	if not wars.has(b): wars[b] = {}
+	
+	wars[a][b] = true
+	wars[b][a] = true
+	if a.allowedCountries.find(b.name) == -1: a.allowedCountries.append(b.name)
+	if b.allowedCountries.find(a.name) == -1: b.allowedCountries.append(a.name)
+
+func get_province_midpoint(pid1: int, pid2: int) -> Vector2:
+	if not MapManager: return Vector2.ZERO
+	var c1 = MapManager.province_centers.get(pid1, Vector2.ZERO)
+	var c2 = MapManager.province_centers.get(pid2, Vector2.ZERO)
+	return (c1 + c2) * 0.5

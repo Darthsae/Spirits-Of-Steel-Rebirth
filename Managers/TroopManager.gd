@@ -1,11 +1,10 @@
 extends Node
 
 # --- CONFIGURATION ---
-const USE_SMOOTH_MOVEMENT := true # Keep this True for smooth movement
 var BASE_SPEED = MainClock.time_scale               # Updated by MainClock
-var AUTO_MERGE = false             # Auto-merge adjacent troops
+var AUTO_MERGE = true             # Auto-merge adjacent troops
 
-# --- DATA STRUCTURES (Optimized Indexes) ---
+# --- DATA STRUCTURES ---
 var troops: Array = []                     # Master list of all troops
 var moving_troops: Array = []              # Subset for _process updates
 var troops_by_province: Dictionary = {}    # { province_id: [TroopData, ...] }
@@ -15,10 +14,8 @@ var path_cache: Dictionary = {}            # { start_id: { target_id: path_array
 var flag_cache: Dictionary = {}            # { country_name: texture }
 var needs_redraw := false                  # Used to throttle redraw calls
 
-# NOTE(pol): Unused
-#var unique_paths_needed: Dictionary = {}
 
-# =============================================================
+# =========================================f====================
 # LIFECYCLE & TIME MANAGEMENT
 # =============================================================
 
@@ -47,21 +44,19 @@ func _process(delta: float) -> void:
 		set_process(false)
 		return
 
-	needs_redraw = false
 	var snapshot := moving_troops.duplicate() # Shallow copy for safe iteration
 
 	for troop in snapshot:
 		if not troops.has(troop):
 			continue # Troop was removed (e.g., by combat)
 
-		if USE_SMOOTH_MOVEMENT:
-			_update_smooth(troop, delta)
-		# We explicitly skip the teleport update since USE_SMOOTH_MOVEMENT is hardcoded True
-		# else: _update_teleport(troop, delta) 
-
+		_update_smooth(troop, delta)
+	
 	if needs_redraw:
 		get_tree().call_group("TroopRenderer", "queue_redraw")
 		needs_redraw = false
+
+
 
 
 # =============================================================
@@ -98,49 +93,35 @@ func _update_smooth(troop: TroopData, delta: float) -> void:
 	needs_redraw = true
 
 
-## Handles the consequence of reaching the end of one path segment.
-func _arrive_at_leg_end(troop: TroopData) -> void:
-	if troop.path.is_empty():
-		_stop_troop(troop)
-		return
 
-	var next_pid = troop.path.pop_front()
-	
-	# 1. Update internal map state (province_id, indexes)
-	_move_troop_to_province_logically(troop, next_pid)
-
-	# 2. Check for combat/conquest immediately upon entering the new province
-	if WarManager:
-		WarManager.resolve_province_conflict(next_pid)
-		# Use deferred call to ensure all combat/death logic finishes before conquest check
-		#WarManager.call_deferred("_handle_combat_end", next_pid) 
-
-	# Check if the troop survived the WarManager call
-	if not troops.has(troop): return
-
-	if troop.path.is_empty():
-		_stop_troop(troop)
-		# Auto-merge if stopped and enabled
-		if AUTO_MERGE and troops.has(troop):
-			_auto_merge_in_province(troop.province_id, troop.country_name)
-	else:
-		_start_next_leg(troop)
-		needs_redraw = true
-
-
-## Prepares the troop for the next segment of its journey.
+"""
+This happens right before a Troop starts moving into the next province
+"""
 func _start_next_leg(troop: TroopData) -> void:
 	if troop.path.is_empty():
 		return
 	
 	var next_pid = troop.path[0]
+	
+	# Check for hostile troops in the next province
+	var troopsExist: Array = troops_by_province.get(next_pid, [])
+	
+	var enemy_troops = troopsExist.filter(func(t): 
+		return WarManager.is_at_war_names(t.country_name, troop.country_name))
+
+	if not enemy_troops.is_empty():
+		WarManager.start_battle(troop.province_id, next_pid)
+		pause_troop(troop) 
+		for enemy in enemy_troops:
+			pause_troop(enemy)
+		return
+	
+	
 	# Set the target position to the center of the next province
 	troop.target_position = MapManager.province_centers.get(int(next_pid), troop.position)
 	troop.set_meta("start_pos", troop.position)
 	
-	# Reset progress for smooth movement
-	if USE_SMOOTH_MOVEMENT:
-		troop.set_meta("progress", 0.0)
+	troop.set_meta("progress", 0.0)
 	
 	# Enable processing
 	troop.is_moving = true
@@ -149,8 +130,33 @@ func _start_next_leg(troop: TroopData) -> void:
 	if not is_processing():
 		set_process(true)
 
+"""
+When a Troop has entered the province
+"""
+func _arrive_at_leg_end(troop: TroopData) -> void:
+	if troop.path.is_empty():
+		_stop_troop(troop)
+		return
 
-## Stops the troop and disables processing if no others are moving.
+	var next_pid = troop.path.pop_front()
+
+	_move_troop_to_province_logically(troop, next_pid)
+	WarManager.resolve_province_arrival(next_pid, troop) 
+	
+	if not troops.has(troop): return
+	
+	if troop.is_moving:
+		if troop.path.is_empty():
+			_stop_troop(troop)
+			if AUTO_MERGE and troops.has(troop):
+				_auto_merge_in_province(troop.province_id, troop.country_name)
+		else:
+			_start_next_leg(troop)
+			needs_redraw = true
+
+
+
+## Deletes Troop Path and stops it moving
 func _stop_troop(troop: TroopData) -> void:
 	moving_troops.erase(troop)
 	troop.is_moving = false
@@ -158,6 +164,40 @@ func _stop_troop(troop: TroopData) -> void:
 	needs_redraw = true
 	if moving_troops.is_empty():
 		set_process(false)
+
+# Pause a troop along its path
+func pause_troop(troop: TroopData) -> void:
+	if moving_troops.has(troop):
+		moving_troops.erase(troop)
+	
+	# Prevents troop from trying to move into invalid positions or (0,0) after resume. (Happens in very rare cases)
+	troop.target_position = troop.position 
+
+	troop.is_moving = false
+	needs_redraw = true
+	if moving_troops.is_empty():
+		set_process(false)
+		
+func resume_troop(troop: TroopData) -> void:
+	if troop.path.is_empty():
+		print("Cannot resume troop. No path set")
+		return
+
+	# FIX: If the target is basically where we are standing, it means
+	# _start_next_leg aborted early (due to battle). We must restart the leg logic.
+	if troop.position.distance_squared_to(troop.target_position) < 1.0:
+		_start_next_leg(troop)
+		return
+
+	if not moving_troops.has(troop):
+		moving_troops.append(troop)
+
+	troop.is_moving = true
+	
+	if not is_processing():
+		set_process(true)
+	#needs_redraw = true
+	#get_tree().call_group("TroopRenderer", "queue_redraw")
 
 
 # =============================================================
@@ -173,9 +213,8 @@ func command_move_assigned(payload: Array) -> void:
 
 	# 1. Setup Allowed Countries
 	var country = payload[0].get('troop').country_name
-	var allowedCountries: Array[String] = [country]
-	if WarManager:
-		allowedCountries.append_array(WarManager.get_enemies(country))
+	var allowedCountries: Array[String] = CountryManager.get_country(country).allowedCountries
+
 
 	# 2. Data containers
 	# maps: troop -> { "targets": [id, id], "paths": { target_id: path_array } }
@@ -515,6 +554,35 @@ func _move_troop_to_province_logically(troop: TroopData, new_pid: int) -> void:
 		troops_by_province[new_pid] = []
 	troops_by_province[new_pid].append(troop)
 
+# Careful using this
+func teleport_troop_to_province(troop: TroopData, target_pid: int) -> void:
+	# Remove from old province index
+	var old_pid = troop.province_id
+	if troops_by_province.has(old_pid):
+		troops_by_province[old_pid].erase(troop)
+		if troops_by_province[old_pid].is_empty():
+			troops_by_province.erase(old_pid)
+
+	# Update troop province
+	troop.province_id = target_pid
+	
+	# Update troop position immediately to center of target province
+	troop.position = MapManager.province_centers.get(target_pid, Vector2.ZERO)
+	troop.target_position = troop.position
+	troop.path.clear()
+	troop.set_meta("start_pos", troop.position)
+	troop.set_meta("progress", 0.0)
+	troop.is_moving = false
+
+	# Add to new province index
+	if not troops_by_province.has(target_pid):
+		troops_by_province[target_pid] = []
+	troops_by_province[target_pid].append(troop)
+
+	needs_redraw = true
+	get_tree().call_group("TroopRenderer", "queue_redraw")
+
+
 
 func get_province_division_count(pid: int) -> int:
 	var total = 0
@@ -524,6 +592,10 @@ func get_province_division_count(pid: int) -> int:
 	return total
 	
 
+func have_troops_in_both_provinces(province_id_a: int, province_id_b: int) -> bool:
+	var has_troops_in_a: bool = troops_by_province.has(province_id_a)
+	var has_troops_in_b: bool = troops_by_province.has(province_id_b)
+	return has_troops_in_a and has_troops_in_b
 
 func clear_path_cache() -> void:
 	path_cache.clear()
@@ -550,6 +622,21 @@ func get_troops_for_country(country):
 func get_troops_in_province(province_id):
 	return troops_by_province.get(province_id, [])
 
+
+func get_province_strength(pid: int, country: String) -> int:
+	var total = 0
+	var list = troops_by_province.get(pid, [])
+	for t in list:
+		if t.country_name == country:
+			total += t.divisions
+	return total
+
+func destroy_force_in_province(pid: int, country: String) -> void:
+	var list = troops_by_province.get(pid, []).duplicate()
+	for t in list:
+		if t.country_name == country:
+			_remove_troop(t)
+	needs_redraw = true
 
 # Used by popup for now
 func get_flag(country: String) -> Texture2D:

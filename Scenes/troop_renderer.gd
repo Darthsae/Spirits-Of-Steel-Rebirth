@@ -1,9 +1,6 @@
 extends Node2D
 class_name TroopRenderer
 
-###
-# I've generated this whole file with ChatGPT
-###
 
 # ==============================================================================
 # 1. CONFIGURATION
@@ -48,24 +45,28 @@ const GHOST_MARGIN := 10.0
 # ==============================================================================
 
 var _font: Font = preload("res://font/TTT-Regular.otf")
-
+const BATTLE_ICON: Texture2D = preload("res://assets/icons/battle_element_transparent.png")
+var BATTLE_ICON_SIZE: Vector2 = BATTLE_ICON.get_size()
 # External Dependencies
 var map_sprite: Sprite2D
 var map_width: float = 0.0
 
-# Runtime State
 var _current_inv_zoom := 1.0
+var old_cam_x = 0
 
 func _ready() -> void:
 	add_to_group("TroopRenderer")
 	z_index = 20
 
-func _process(_delta: float) -> void:
+func _process(_delta):
 	var cam := get_viewport().get_camera_2d()
-	if cam:
-		var raw_scale = 1.0 / cam.zoom.x
+	
+	if cam.zoom.x != old_cam_x:
+		old_cam_x = cam.zoom.x
+		var raw_scale = 1.0 / old_cam_x
 		_current_inv_zoom = clamp(raw_scale, ZOOM_LIMITS.min_scale, ZOOM_LIMITS.max_scale)
 	queue_redraw()
+
 
 # ==============================================================================
 # 3. DRAWING LOOP
@@ -109,7 +110,22 @@ func _draw() -> void:
 			for j in [-1, 0, 1]:
 				var scroll_offset = Vector2(map_width * j, 0)
 				_draw_single_troop_visual(t, offset_pos + scroll_offset, player_country)
+	
 
+		for battle in WarManager.active_battles:
+			var pos = battle.position - map_offset
+			var tex := BATTLE_ICON
+			var size := tex.get_size() * 0.05
+			var draw_pos = pos - size * 0.5
+
+			var p = battle.get_player_relative_progress(CountryManager.player_country.country_name)
+
+			var color := Color(0, 1, 0, 1) if p >= 0.0 else Color(1, 0, 0, 1)
+			draw_circle(pos, 1.3, color)
+
+			draw_texture_rect(tex, Rect2(draw_pos, size), false)
+
+		
 
 func _group_troops_by_position(troops: Array, radius: float) -> Dictionary:
 	var groups = {}
