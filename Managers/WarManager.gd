@@ -12,10 +12,10 @@ const HP_PER_DIVISION = 10
 
 var wars := {} 
 var active_battles := []
-var time_scale := 1.0
 
 const AI_TICK_INTERVAL := 5.0
 var ai_timer := 0.0
+
 
 class Battle:
 	var attacker_pid: int
@@ -71,7 +71,6 @@ class Battle:
 		# --- Effective combat power ---
 		var att_ecp = att_divs * att_morale / manager.MORALE_INITIAL
 		var def_ecp = def_divs * def_morale / manager.MORALE_INITIAL * 1.2
-		var total_ecp = max(1.0, att_ecp + def_ecp)
 
 		# --- Province HP damage ---
 		province_hp -= att_ecp * manager.BASE_DAMAGE_DIVISIONS
@@ -141,18 +140,9 @@ class Battle:
 		return attack_progress if attacker_country == player_country else -attack_progress
 
 
-
-# --- LIFECYCLE ---
-func _ready():
-	if MainClock:
-		time_scale = MainClock.time_scale
-		MainClock.time_scale_changed.connect(func(s): time_scale = s)
-
 func _process(delta: float):
-	
-	
 	if wars.is_empty(): return
-	var scaled = delta * time_scale
+	var scaled = delta * MainClock.time_scale
 	ai_timer += scaled
 	if ai_timer >= AI_TICK_INTERVAL:
 		ai_timer -= AI_TICK_INTERVAL
@@ -163,7 +153,7 @@ func _process(delta: float):
 		battle.tick(scaled)
 		
 
-	
+
 func _ai_decision_tick():
 	if not CountryManager or not TroopManager or not MapManager:
 		return
@@ -186,14 +176,14 @@ func _ai_decision_tick():
 		var empty_targets: Array = []
 
 		for prov in MapManager.province_to_country.keys():
-			var owner = MapManager.province_to_country[prov]
+			var country_of_this_province = MapManager.province_to_country[prov]
 			var troops_here = TroopManager.get_troops_in_province(prov)
 
-			if owner != ai_country and is_at_war_names(ai_country, owner):
+			if country_of_this_province != ai_country and is_at_war_names(ai_country, country_of_this_province):
 				# Add only if there are enemy troops
 				if troops_here.size() > 0:
 					enemy_targets.append(prov)
-			elif owner == ai_country and troops_here.size() == 0:
+			elif country_of_this_province == ai_country and troops_here.size() == 0:
 				# Empty province in AI territory
 				empty_targets.append(prov)
 
@@ -225,10 +215,6 @@ func _ai_decision_tick():
 				TroopManager.order_move_troop(troop, target_pid)
 
 
-
-
-
-
 func apply_casualties(pid: int, country: String, damage_divisions: float):
 	var troops_list = TroopManager.get_troops_in_province(pid).filter(func(t): return t.country_name == country)
 	if troops_list.is_empty() or damage_divisions <= 0: return
@@ -247,7 +233,6 @@ func apply_casualties(pid: int, country: String, damage_divisions: float):
 			
 
 
-# --- API ---
 func start_battle(attacker_pid: int, defender_pid: int):
 	# Prevent duplicates
 	for b in active_battles:
@@ -265,15 +250,18 @@ func start_battle(attacker_pid: int, defender_pid: int):
 	var battle = Battle.new(attacker_pid, defender_pid, atk_country, def_country, midpoint, self)
 	active_battles.append(battle)
 
+
 func resolve_province_arrival(pid: int, troop: TroopData):
-	var owner = MapManager.province_to_country.get(pid)
-	if owner != troop.country_name and is_at_war_names(troop.country_name, owner):
-		var enemies = TroopManager.get_province_strength(pid, owner)
+	var country = MapManager.province_to_country.get(pid)
+	if country != troop.country_name and is_at_war_names(troop.country_name, country):
+		var enemies = TroopManager.get_province_strength(pid, country)
 		if enemies <= 0:
 			conquer_province(pid, troop.country_name)
 
+
 func end_battle(battle: Battle):
 	active_battles.erase(battle)
+
 
 func conquer_province(pid: int, new_owner: String):
 	var old_owner = MapManager.province_to_country.get(pid)
@@ -293,16 +281,16 @@ func conquer_province(pid: int, new_owner: String):
 	
 
 
-# --- WAR STATE UTILS ---
 func declare_war(a: CountryData, b: CountryData) -> void:
 	add_war_silent(a, b)
-	if PopupManager: PopupManager.show_alert("war", a, b)
-	if MusicManager: 
-		MusicManager.play_sfx(MusicManager.SFX.DECLARE_WAR)
-		MusicManager.play_music(MusicManager.MUSIC.BATTLE_THEME)
+	PopupManager.show_alert("war", a, b)
+	MusicManager.play_sfx(MusicManager.SFX.DECLARE_WAR)
+	MusicManager.play_music(MusicManager.MUSIC.BATTLE_THEME)
+
 
 func is_at_war(a: CountryData, b: CountryData) -> bool:
 	return wars.has(a) and wars[a].has(b)
+
 
 func is_at_war_names(a_name: String, b_name: String) -> bool:
 	if not CountryManager: return false
@@ -310,6 +298,7 @@ func is_at_war_names(a_name: String, b_name: String) -> bool:
 	var b_data = CountryManager.get_country(b_name)
 	if a_data and b_data: return is_at_war(a_data, b_data)
 	return false
+
 
 func add_war_silent(a: CountryData, b: CountryData) -> void:
 	if a == b or is_at_war(a, b): return
@@ -321,8 +310,10 @@ func add_war_silent(a: CountryData, b: CountryData) -> void:
 	if a.allowedCountries.find(b.name) == -1: a.allowedCountries.append(b.name)
 	if b.allowedCountries.find(a.name) == -1: b.allowedCountries.append(a.name)
 
+
 func get_province_midpoint(pid1: int, pid2: int) -> Vector2:
 	if not MapManager: return Vector2.ZERO
 	var c1 = MapManager.province_centers.get(pid1, Vector2.ZERO)
 	var c2 = MapManager.province_centers.get(pid2, Vector2.ZERO)
 	return (c1 + c2) * 0.5
+

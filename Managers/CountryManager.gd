@@ -7,16 +7,15 @@ var player_country: CountryData
 
 func _ready() -> void:
 	await get_tree().process_frame
-	if MainClock:
-		MainClock.connect("day_passed", Callable(self, "_on_day_passed"))
+	MainClock.day_passed.connect(_on_day_passed)
 
 
-func _on_day_passed(day, month, year) -> void:
+func _on_day_passed() -> void:
 	# Loop through every country instance in the dictionary
-	for c_name in countries:
+	for c_name: String in countries:
 		var country_obj: CountryData = countries[c_name]
 		country_obj.process_turn()
-	emit_signal("player_stats_changed")
+	player_stats_changed.emit()
 
 
 func initialize_countries() -> void:

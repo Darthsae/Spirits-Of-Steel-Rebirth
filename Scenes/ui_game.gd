@@ -63,17 +63,15 @@ func _ready() -> void:
 
 
 func _connect_signals() -> void:
-	if MainClock:
-		MainClock.hour_passed.connect(_on_time_passed)
-	if MapManager:
-		MapManager.province_clicked.connect(_on_province_clicked)
-		MapManager.close_sidemenu.connect(close_menu)
-	if KeyboardManager:
-		KeyboardManager.toggle_menu.connect(toggle_menu)
-	if CountryManager:
-		CountryManager.player_stats_changed.connect(_on_stats_changed)
-		CountryManager.player_country_changed.connect(_on_player_change)
-	
+	MainClock.hour_passed.connect(_on_time_passed)
+
+	MapManager.province_clicked.connect(_on_province_clicked)
+	MapManager.close_sidemenu.connect(close_menu)
+
+	KeyboardManager.toggle_menu.connect(toggle_menu)
+
+	CountryManager.player_stats_changed.connect(_on_stats_changed)
+	CountryManager.player_country_changed.connect(_on_player_change)
 	
 	plus.pressed.connect(_on_speed_button_pressed.bind(true))
 	minus.pressed.connect(_on_speed_button_pressed.bind(false))
@@ -152,9 +150,8 @@ func build_menu(context: MenuContext) -> void:
 func _refresh_buttons() -> void:
 	if not is_open:
 		return
-	for btn in actions_container.get_children():
-		if btn.has_method("check_affordability"):
-			btn.check_affordability(player.political_power)
+	for action_row: ActionRow in actions_container.get_children():
+		action_row.button.disabled = (player.political_power < action_row.required_pp)
 
 
 # ── UI Updates ────────────────────────────────────────
@@ -173,7 +170,7 @@ func _on_stats_changed() -> void:
 	_refresh_buttons()
 
 
-func _on_time_passed(_h := 0) -> void:
+func _on_time_passed() -> void:
 	label_date.text = MainClock.get_datetime_string()
 
 
@@ -193,6 +190,7 @@ func _update_merge_label() -> void:
 func _declare_war():
 	WarManager.declare_war(CountryManager.player_country, selected_country)
 	open_menu(MenuContext.WAR)
+
 
 func _send_aid():         print("Sending aid!")
 func _improve_relations(): print("Improving relations")

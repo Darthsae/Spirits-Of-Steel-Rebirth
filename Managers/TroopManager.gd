@@ -1,7 +1,6 @@
 extends Node
 
 # --- CONFIGURATION ---
-var BASE_SPEED = MainClock.time_scale               # Updated by MainClock
 var AUTO_MERGE = true             # Auto-merge adjacent troops
 
 # --- DATA STRUCTURES ---
@@ -15,18 +14,8 @@ var flag_cache: Dictionary = {}            # { country_name: texture }
 var needs_redraw := false                  # Used to throttle redraw calls
 
 
-# =========================================f====================
-# LIFECYCLE & TIME MANAGEMENT
-# =============================================================
-
 func _ready() -> void:
 	set_process(false)
-	if MainClock:
-		MainClock.time_scale_changed.connect(_update_time_stuff)
-
-
-func _update_time_stuff(speed) -> void:
-	BASE_SPEED = speed
 
 
 func change_merge() -> void:
@@ -72,7 +61,7 @@ func _update_smooth(troop: TroopData, delta: float) -> void:
 
 	# --- Stage 1: Visual indicator ---
 	var visual_progress = troop.get_meta("visual_progress", 0.0)
-	visual_progress += BASE_SPEED * delta / total_dist
+	visual_progress += MainClock.time_scale * delta / total_dist
 	if visual_progress > 1.0:
 		visual_progress = 1.0  # cap at 1
 	troop.set_meta("visual_progress", visual_progress)
@@ -80,7 +69,7 @@ func _update_smooth(troop: TroopData, delta: float) -> void:
 	# --- Stage 2: Actual troop movement ---
 	var move_progress = troop.get_meta("progress", 0.0)
 	if visual_progress >= 1.0:
-		move_progress += BASE_SPEED * delta / total_dist
+		move_progress += MainClock.time_scale * delta / total_dist
 		if move_progress >= 1.0:
 			troop.position = end
 			troop.set_meta("progress", 0.0)

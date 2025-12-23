@@ -1,5 +1,3 @@
-# MusicManager.gd
-# NOTE(pol): This is more like a sound API
 extends Node
 
 var music_player: AudioStreamPlayer
@@ -13,6 +11,7 @@ enum SFX {
 	HOVERED,
 	CLOSE_MENU,
 }
+
 enum MUSIC {
 	MAIN_THEME,
 	BATTLE_THEME
@@ -48,7 +47,6 @@ var music_map = {
 	# MUSIC.BATTLE_THEME: preload("res://assets/music/battle_theme.ogg")
 }
 
-# *** MULTIPLE SFX SUPPORT ***
 var sfx_players: Array[AudioStreamPlayer] = []
 
 
@@ -64,7 +62,7 @@ func _ready():
 		add_child(player)
 		player.bus = "SFX"
 		sfx_players.append(player)
-	play_music(MUSIC.MAIN_THEME, true)
+	play_music(MUSIC.MAIN_THEME)
 
 
 func play_sfx(sfx: int):
@@ -85,7 +83,7 @@ func play_sfx(sfx: int):
 	player.play()
 
 
-func play_music(track: int, loop: bool = true):
+func play_music(track: int):
 	if track not in music_map:
 		return
 	

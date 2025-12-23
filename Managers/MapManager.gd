@@ -33,9 +33,6 @@ const CACHE_FOLDER = "res://map_data/"
 @export var region_texture: Texture2D
 @export var culture_texture: Texture2D
 
-# NOTE(pol): Unused var
-#var map_data: MapData
-
 
 func _ready() -> void:
 	var dir = DirAccess.open("res://")
@@ -64,7 +61,7 @@ func _ready() -> void:
 		return
 
 	print("MapManager: First-time setup — parsing map (this may take 5–15 seconds)...")
-	call_deferred("_generate_and_save", region, culture)
+	_generate_and_save.call_deferred(region, culture)
 
 
 func _generate_and_save(region: Texture2D, culture: Texture2D) -> void:

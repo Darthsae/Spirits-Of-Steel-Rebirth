@@ -1,6 +1,6 @@
 [gd_resource type="Theme" load_steps=7 format=3 uid="uid://c38ivksvf4is0"]
 
-[ext_resource type="FontFile" uid="uid://cee8mbnpx3w3h" path="res://font/arial.TTF" id="1_umafu"]
+[ext_resource type="FontFile" uid="uid://cee8mbnpx3w3h" path="res://font/arial.TTF" id="1_y3u7b"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_umafu"]
 content_margin_left = 4.0
@@ -17,7 +17,7 @@ content_margin_left = 4.0
 content_margin_top = 4.0
 content_margin_right = 4.0
 content_margin_bottom = 4.0
-bg_color = Color(0.23753905, 0.23753914, 0.23753911, 1)
+bg_color = Color(0.19434926, 0.19434929, 0.19434917, 1)
 corner_detail = 5
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_h7yuw"]
@@ -37,7 +37,7 @@ bg_color = Color(0.4045111, 0.40451115, 0.4045111, 1)
 corner_detail = 5
 
 [resource]
-default_font = ExtResource("1_umafu")
+default_font = ExtResource("1_y3u7b")
 default_font_size = 20
 Button/colors/font_color = Color(0.875, 0.875, 0.875, 1)
 Button/colors/font_disabled_color = Color(0.875, 0.875, 0.875, 0.5)
