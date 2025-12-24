@@ -48,11 +48,6 @@ func _process(delta: float) -> void:
 		needs_redraw = false
 
 
-
-
-# =============================================================
-# MOVEMENT LOGIC
-# =============================================================
 func _update_smooth(troop: TroopData, delta: float) -> void:
 	var start = troop.get_meta("start_pos", troop.position)
 	var end = troop.target_position

@@ -3,7 +3,6 @@ class_name TroopSelection
 
 
 var font: Font = preload("res://font/TTT-Regular.otf")
-const TROOP_DATA_TYPE = preload("res://Scripts/TroopData.gd")
 
 # --- Constants ---
 const FLAG_WIDTH_BASE := 24.0
@@ -25,10 +24,10 @@ var right_path: Array = []
 # --- New State Variable to Cache Max Path Length ---
 var max_path_length: int = 0
 
-var selected_troops: Array[TROOP_DATA_TYPE] = []
+var selected_troops: Array[TroopData] = []
 
 
-func select_troops(new_list: Array[TROOP_DATA_TYPE], append: bool = false) -> void:
+func select_troops(new_list: Array[TroopData], append: bool = false) -> void:
 	if not append:
 		selected_troops.clear()
 	
