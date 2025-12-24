@@ -59,10 +59,6 @@ func _on_map_ready() -> void:
 		for pid in selected_provinces:
 			TroopManager.create_troop(c, randi_range(1, 10), pid)
 
-	#WarManager.declare_war("turkey", "bulgaria")
-	#WarManager.declare_war("turkey", "iraq")
-	#WarManager.declare_war("iraq", "bulgaria")
-	#PopupManager.show_alert('war', 'netherlands', 'france')
 
 
 func _create_ghost_map(offset: Vector2, p_material: ShaderMaterial) -> void:

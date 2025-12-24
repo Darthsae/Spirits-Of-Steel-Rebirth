@@ -1,45 +1,50 @@
-# CameraController.gd
 extends Node
 
-@onready var camera: Camera2D = get_parent().get_node("Camera2D") as Camera2D
+@onready var camera: Camera2D = get_parent().get_node("Camera2D")
 
-@export var base_speed: float = 500.0
-@export var zoom_speed: float = 0.6
-@export var min_zoom: float = 0.6
-@export var max_zoom: float = 15
+@export_group("Movement")
+@export var base_speed: float = 600.0
+
+@export_group("Zoom Settings")
+@export var zoom_step: float = 0.9  # Linear step
+@export var min_zoom: float = 0.5
+@export var max_zoom: float = 10.0
+
+var is_dragging := false
 
 func _process(delta: float) -> void:
 	if GameState.decision_tree_open: return
-	
-	var velocity := Vector2.ZERO
-	if Input.is_action_pressed("move_right"):  velocity.x += 1  # Speed is done with base_speed variable
-	if Input.is_action_pressed("move_left"):   velocity.x -= 1
-	if Input.is_action_pressed("move_down"):   velocity.y += 1
-	if Input.is_action_pressed("move_up"):     velocity.y -= 1
-	
-	if velocity != Vector2.ZERO:
-		velocity = velocity.normalized()
-		var zoom_factor := camera.zoom.x
-		camera.position += velocity * (base_speed / zoom_factor) * delta
-
+	_handle_keyboard_movement(delta)
 
 func _input(event: InputEvent) -> void:
 	if GameState.decision_tree_open: return
 
-	
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_MIDDLE:
+		is_dragging = event.pressed
+		get_viewport().set_input_as_handled()
+
+	if event is InputEventMouseMotion and is_dragging:
+		camera.position -= event.relative / camera.zoom.x
+
 	if event is InputEventMouseButton and event.is_pressed():
-		var mouse_world_before = camera.get_global_mouse_position()
+		var zoom_dir = 0
+		if event.button_index == MOUSE_BUTTON_WHEEL_UP:
+			zoom_dir = 1
+		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+			zoom_dir = -1
 		
-		if event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			camera.zoom = (camera.zoom - Vector2(zoom_speed, zoom_speed)).clamp(
-				Vector2(min_zoom, min_zoom),
-				Vector2(max_zoom, max_zoom)
-			)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			camera.zoom = (camera.zoom + Vector2(zoom_speed, zoom_speed)).clamp(
-				Vector2(min_zoom, min_zoom),
-				Vector2(max_zoom, max_zoom)
-			)
-		
-		var mouse_world_after = camera.get_global_mouse_position()
-		camera.position += mouse_world_before - mouse_world_after
+		if zoom_dir != 0:
+			_perform_zoom(zoom_dir)
+
+func _handle_keyboard_movement(delta: float) -> void:
+	var input_dir = Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	camera.position += input_dir * (base_speed / camera.zoom.x) * delta
+
+func _perform_zoom(direction: int) -> void:
+	var mouse_pos_before = camera.get_global_mouse_position()
+	
+	var new_zoom_val = clamp(camera.zoom.x + (direction * zoom_step), min_zoom, max_zoom)
+	camera.zoom = Vector2.ONE * new_zoom_val
+	
+	var mouse_pos_after = camera.get_global_mouse_position()
+	camera.position += (mouse_pos_before - mouse_pos_after)
