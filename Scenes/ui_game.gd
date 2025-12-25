@@ -5,7 +5,6 @@ enum MenuContext { SELF, WAR, DIPLOMACY }
 # ── Top Bar Nodes ─────────────────────────────────────
 @onready var nation_flag: TextureRect = $Topbar/MarginContainer/HBoxContainer/nation_flag
 @onready var label_date: Label = $Topbar/MarginContainer2/ColorRect/MarginContainer/label_date
-@onready var label_merge: Label = $Label
 @onready var label_politicalpower: Label = $Topbar/MarginContainer/HBoxContainer/label_politicalpower
 @onready var label_manpower: Label = $Topbar/MarginContainer/HBoxContainer/label_manpower
 @onready var label_money: Label = $Topbar/MarginContainer/HBoxContainer/label_money

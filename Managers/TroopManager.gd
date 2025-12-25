@@ -11,7 +11,6 @@ var troops_by_country: Dictionary = {}     # { country_name: [TroopData, ...] }
 
 var path_cache: Dictionary = {}            # { start_id: { target_id: path_array } }
 var flag_cache: Dictionary = {}            # { country_name: texture }
-var needs_redraw := false                  # Used to throttle redraw calls
 
 var troop_selection: TroopSelection
 
@@ -42,10 +41,6 @@ func _process(delta: float) -> void:
 			continue # Troop was removed (e.g., by combat)
 
 		_update_smooth(troop, delta)
-	
-	if needs_redraw:
-		get_tree().call_group("TroopRenderer", "queue_redraw")
-		needs_redraw = false
 
 
 func _update_smooth(troop: TroopData, delta: float) -> void:
@@ -75,8 +70,6 @@ func _update_smooth(troop: TroopData, delta: float) -> void:
 		else:
 			troop.position = start.lerp(end, move_progress)
 			troop.set_meta("progress", move_progress)
-	
-	needs_redraw = true
 
 
 
@@ -138,7 +131,6 @@ func _arrive_at_leg_end(troop: TroopData) -> void:
 				_auto_merge_in_province(troop.province_id, troop.country_name)
 		else:
 			_start_next_leg(troop)
-			needs_redraw = true
 
 
 
@@ -147,7 +139,6 @@ func _stop_troop(troop: TroopData) -> void:
 	moving_troops.erase(troop)
 	troop.is_moving = false
 	troop.path.clear()
-	needs_redraw = true
 	if moving_troops.is_empty():
 		set_process(false)
 
@@ -160,7 +151,6 @@ func pause_troop(troop: TroopData) -> void:
 	troop.target_position = troop.position 
 
 	troop.is_moving = false
-	needs_redraw = true
 	if moving_troops.is_empty():
 		set_process(false)
 		
@@ -182,8 +172,6 @@ func resume_troop(troop: TroopData) -> void:
 	
 	if not is_processing():
 		set_process(true)
-	#needs_redraw = true
-	#get_tree().call_group("TroopRenderer", "queue_redraw")
 
 
 # =============================================================
@@ -430,9 +418,6 @@ func create_troop(country: String, divs: int, prov_id: int) -> TroopData:
 	if AUTO_MERGE:
 		_auto_merge_in_province(prov_id, country)
 
-	needs_redraw = true
-	get_tree().call_group("TroopRenderer", "queue_redraw")
-
 	return troop
 
 
@@ -464,8 +449,6 @@ func _auto_merge_in_province(province_id: int, country: String) -> void:
 	for troop in to_remove:
 		_remove_troop(troop)
 
-	needs_redraw = true
-
 
 # =============================================================
 # WAR MANAGER INTERFACE (Hooks for Combat & Strategy)
@@ -481,7 +464,6 @@ func move_to_garrison(troop: TroopData) -> void:
 	troop.position = center
 	troop.target_position = center
 	_stop_troop(troop) # Stops any ongoing movement
-	needs_redraw = true
 
 
 # =============================================================
@@ -565,10 +547,6 @@ func teleport_troop_to_province(troop: TroopData, target_pid: int) -> void:
 		troops_by_province[target_pid] = []
 	troops_by_province[target_pid].append(troop)
 
-	needs_redraw = true
-	get_tree().call_group("TroopRenderer", "queue_redraw")
-
-
 
 func get_province_division_count(pid: int) -> int:
 	var total = 0
@@ -622,7 +600,7 @@ func destroy_force_in_province(pid: int, country: String) -> void:
 	for t in list:
 		if t.country_name == country:
 			_remove_troop(t)
-	needs_redraw = true
+
 
 # Used by popup for now
 func get_flag(country: String) -> Texture2D:

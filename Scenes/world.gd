@@ -3,7 +3,7 @@ extends Node2D
 
 @onready var map_sprite: Sprite2D = $MapContainer/CultureSprite as Sprite2D
 @onready var camera: Camera2D = $Camera2D as Camera2D
-@onready var troop_renderer: Node2D = $MapContainer/TroopRenderer as Node2D
+@onready var troop_renderer: CustomRenderer = $MapContainer/CustomRenderer as CustomRenderer
 
 const MAP_SHADER = preload("res://shaders/map_shader.gdshader")
 
@@ -46,7 +46,7 @@ func _on_map_ready() -> void:
 		troop_renderer.map_sprite = map_sprite
 		troop_renderer.map_width = map_width
 	else:
-		push_error("TroopRenderer node not found!")
+		push_error("CustomRenderer node not found!")
 	
 	
 	CountryManager.initialize_countries()

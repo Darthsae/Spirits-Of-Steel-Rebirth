@@ -638,13 +638,13 @@ func _load_country_colors() -> void:
 		return
 
 	var data = JSON.parse_string(file.get_as_text())
-	if typeof(data) != TYPE_DICTIONARY:
+	if data is not Dictionary:
 		push_error("Invalid JSON format")
 		return
 
 	COUNTRY_COLORS.clear()
-	for name in data.keys():
-		var rgb = data[name].get("color")
+	for country_name in data.keys():
+		var rgb = data[country_name].get("color")
 		if rgb == null or rgb.size() != 3:
 			continue
-		COUNTRY_COLORS[name] = Color8(rgb[0], rgb[1], rgb[2])
+		COUNTRY_COLORS[country_name] = Color8(rgb[0], rgb[1], rgb[2])

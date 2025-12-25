@@ -5,7 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://b1bonv2ujcxxi" path="res://maps/cultures.png" id="2_go701"]
 [ext_resource type="Texture2D" uid="uid://ct2rdn4ldt5ks" path="res://maps/regions.png" id="3_5a7ea"]
 [ext_resource type="Script" uid="uid://cvkc8n0kgyk3c" path="res://Scenes/camera_controller.gd" id="4_8j60k"]
-[ext_resource type="Script" uid="uid://bko55up7cjg3g" path="res://Scenes/troop_renderer.gd" id="5_o06y3"]
+[ext_resource type="Script" uid="uid://bko55up7cjg3g" path="res://Scenes/custom_renderer.gd" id="5_o06y3"]
 [ext_resource type="Script" uid="uid://dx8iwvng5oypc" path="res://Scripts/troop_selection.gd" id="6_5ukr8"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_8j60k"]
@@ -27,7 +27,7 @@ visible = false
 texture = ExtResource("3_5a7ea")
 centered = false
 
-[node name="TroopRenderer" type="Node2D" parent="MapContainer" groups=["TroopRenderer"]]
+[node name="CustomRenderer" type="Node2D" parent="MapContainer"]
 script = ExtResource("5_o06y3")
 
 [node name="CameraController" type="Node2D" parent="."]

@@ -33,10 +33,6 @@ GameState="*res://Managers/GameState.gd"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
-[global_group]
-
-TroopRenderer=""
-
 [gui]
 
 theme/custom_font="uid://cee8mbnpx3w3h"

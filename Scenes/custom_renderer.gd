@@ -1,11 +1,7 @@
 extends Node2D
-class_name TroopRenderer
+class_name CustomRenderer
 
-# ==============================================================================
-# CONFIGURATION
-# ==============================================================================
 
-## VISUAL SETTINGS (Colors)
 const COLORS = {
 	"background":       Color(0, 0, 0, 0.8),
 	"text":            Color(1, 1, 1, 1),
@@ -21,7 +17,6 @@ const COLORS = {
 	"battle_negative":  Color(1, 0, 0, 1)      # Red (Losing)
 }
 
-## LAYOUT SETTINGS (Base sizes in SCREEN PIXELS)
 const LAYOUT = {
 	"flag_width":       24.0, 
 	"flag_height":      20.0,
@@ -32,20 +27,14 @@ const LAYOUT = {
 	"font_size":        18
 }
 
-## ZOOM SCALING LIMITS
 const ZOOM_LIMITS = {
 	"min_scale":  0.12, 
 	"max_scale":  4.0 
 }
 
-## SYSTEM SETTINGS
 const GHOST_MARGIN := 10.0
 const STACKING_RADIUS := 1.0
 const STACKING_OFFSET_Y := 20
-
-# ==============================================================================
-# RESOURCES & STATE
-# ==============================================================================
 
 var _font: Font = preload("res://font/TTT-Regular.otf")
 const BATTLE_ICON:  Texture2D = preload("res://assets/icons/battle_element_transparent.png")
@@ -53,80 +42,45 @@ var BATTLE_ICON_SIZE: Vector2 = BATTLE_ICON.get_size()
 
 var map_sprite: Sprite2D
 var map_width: float = 0.0
-var troop_selection:  TroopSelection
 
 var _current_inv_zoom := 1.0
-var old_cam_x = 0.0
 
 
 func _ready() -> void:
-	add_to_group("TroopRenderer")
 	z_index = 20
-	
-	# Try absolute path first
-	troop_selection = get_tree().root.get_node_or_null("Game/UI/TroopSelection")
-	
-	# If not found, search by name
-	if troop_selection == null:
-		var found = get_tree().root.find_child("TroopSelection", true, false)
-		if found is TroopSelection:
-			troop_selection = found
 
 
 func _process(_delta: float) -> void:
 	var cam := get_viewport().get_camera_2d()
-	
-	if cam.zoom.x != old_cam_x:
-		old_cam_x = cam.zoom.x
-		var raw_scale = 1.0 / old_cam_x
-		_current_inv_zoom = clamp(raw_scale, ZOOM_LIMITS.min_scale, ZOOM_LIMITS.max_scale)
+	var raw_scale = 1.0 / cam.zoom.x
+	_current_inv_zoom = clamp(raw_scale, ZOOM_LIMITS.min_scale, ZOOM_LIMITS.max_scale)
 	
 	queue_redraw()
 
 
-# ==============================================================================
-# MAIN DRAWING LOOP
-# ==============================================================================
-
 func _draw() -> void:
-	if not _can_draw():
+	if !map_sprite or map_width < 0:
 		return
 
-	# Draw in order:  background elements → troops → UI elements
-	_draw_selection_box()
 	_draw_troops()
 	_draw_path_preview()
 	_draw_active_movements()
 	_draw_battles()
 
+	_draw_selection_box()
 
-func _can_draw() -> bool:
-	return (
-		not TroopManager.troops.is_empty() 
-		and map_sprite != null 
-		and map_sprite.texture != null 
-		and map_width > 0.0
-	)
-
-
-# ==============================================================================
-# DRAWING:  SELECTION BOX
-# ==============================================================================
 
 func _draw_selection_box() -> void:
-	if not troop_selection or not troop_selection.is_dragging_selection():
+	if not TroopManager.troop_selection.dragging:
 		return
 	
-	var selection_rect = troop_selection.get_selection_rect()
+	var troop_selection := TroopManager.troop_selection
+	var selection_rect = Rect2(troop_selection.drag_start, troop_selection.drag_end - troop_selection.drag_start).abs()
 	if selection_rect.size == Vector2.ZERO:
 		return
 	
 	draw_rect(selection_rect, Color(1.0, 1.0, 1.0, 1.0), false, 2.0)
 
-
-# ==============================================================================
-# DRAWING:  TROOPS
-# ==============================================================================
 
 func _draw_troops() -> void:
 	var player_country = CountryManager.player_country.country_name
@@ -233,7 +187,7 @@ func _draw_single_troop_visual(troop: TroopData, pos: Vector2, player_country:  
 
 func _get_troop_style(troop: TroopData, player_country: String) -> Dictionary:
 	var is_owner = troop.country_name.to_lower() == player_country
-	var is_selected = troop_selection and troop_selection.is_troop_selected(troop)
+	var is_selected = TroopManager.troop_selection.selected_troops.has(troop)
 	
 	if is_owner:
 		if is_selected:
@@ -244,16 +198,12 @@ func _get_troop_style(troop: TroopData, player_country: String) -> Dictionary:
 		return { "color": COLORS.border_other, "width": LAYOUT.border_other_px }
 
 
-# ==============================================================================
-# DRAWING: PATH PREVIEW
-# ==============================================================================
-
 func _draw_path_preview() -> void:
-	if not troop_selection or not troop_selection.is_tracing_path():
+	if not TroopManager.troop_selection.right_dragging:
 		return
 	
-	var right_path = troop_selection.get_right_path()
-	var max_path_length = troop_selection.get_max_path_length()
+	var right_path = TroopManager.troop_selection.right_path
+	var max_path_length = TroopManager.troop_selection.max_path_length
 	
 	if right_path.is_empty():
 		return
@@ -269,10 +219,6 @@ func _draw_path_preview() -> void:
 			draw_line(p, right_path[i + 1]["map_pos"] + map_sprite.position, color, 1.5)
 
 
-# ==============================================================================
-# DRAWING: ACTIVE MOVEMENTS
-# ==============================================================================
-
 func _draw_active_movements() -> void:
 	for troop in TroopManager.troops:
 		if not troop.is_moving:
@@ -286,10 +232,6 @@ func _draw_active_movements() -> void:
 		draw_line(start_local, current_visual_pos, COLORS.movement_active, 2.0)
 		draw_line(start_local, end_local, COLORS.movement_line, 1.0)
 
-
-# ==============================================================================
-# DRAWING: BATTLES
-# ==============================================================================
 
 func _draw_battles() -> void:
 	for battle in WarManager.active_battles:
