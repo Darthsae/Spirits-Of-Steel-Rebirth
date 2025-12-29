@@ -3,8 +3,7 @@ extends Node
 const BATTLE_TICK := 5
 const PROGRESS_MAX := 99.0
 
-# TODO: Countries should determine this individually
-const MORALE_INITIAL := 83
+# General Constants
 const MORALE_DECAY_RATE := 0.05
 const BASE_DAMAGE_DIVISIONS := 1
 const MORALE_BOOST_DEFENDER := 5.0 
@@ -16,12 +15,15 @@ var active_battles := []
 const AI_TICK_INTERVAL := 5.0
 var ai_timer := 0.0
 
-
 class Battle:
 	var attacker_pid: int
 	var defender_pid: int
 	var attacker_country: String
 	var defender_country: String
+	
+	# References to country data for live stats
+	var attacker_stats: CountryData
+	var defender_stats: CountryData
 
 	var attack_progress := 0.0
 	var att_morale: float
@@ -42,6 +44,10 @@ class Battle:
 		defender_country = def_c
 		position = pos
 		manager = m
+		
+		# Fetch Country Data Objects
+		attacker_stats = CountryManager.get_country(attacker_country)
+		defender_stats = CountryManager.get_country(defender_country)
 
 		var att_divs = _get_divisions(attacker_pid, attacker_country)
 		var def_divs = _get_divisions(defender_pid, defender_country)
@@ -51,8 +57,17 @@ class Battle:
 		province_max_hp = max(1.0, def_divs * manager.HP_PER_DIVISION)
 		province_hp = province_max_hp
 
-		att_morale = manager.MORALE_INITIAL
-		def_morale = manager.MORALE_INITIAL + manager.MORALE_BOOST_DEFENDER
+		# --- DYNAMIC MORALE INIT ---
+		# If country data exists, use its calculated max morale. Fallback to 80 if null.
+		if attacker_stats:
+			att_morale = attacker_stats.get_max_morale()
+		else:
+			att_morale = 80.0
+			
+		if defender_stats:
+			def_morale = defender_stats.get_max_morale() + manager.MORALE_BOOST_DEFENDER
+		else:
+			def_morale = 80.0 + manager.MORALE_BOOST_DEFENDER
 
 	func tick(delta: float):
 		timer += delta
@@ -68,15 +83,23 @@ class Battle:
 			manager.end_battle(self)
 			return
 
+		# --- DYNAMIC MODIFIERS ---
+		var att_mult = 1.0
+		var def_mult = 1.0
+		
+		if attacker_stats: att_mult = attacker_stats.get_attack_efficiency()
+		if defender_stats: def_mult = defender_stats.get_defense_efficiency()
+
 		# --- Effective combat power ---
-		var att_ecp = att_divs * att_morale / manager.MORALE_INITIAL
-		var def_ecp = def_divs * def_morale / manager.MORALE_INITIAL * 1.2
+		# Morale is normalized against a baseline (e.g. 100) for calculation
+		var att_ecp = att_divs * (att_morale / 100.0) * att_mult
+		var def_ecp = def_divs * (def_morale / 100.0) * def_mult * 1.2 # 1.2 is base defender terrain/entrenchment bonus
 
 		# --- Province HP damage ---
 		province_hp -= att_ecp * manager.BASE_DAMAGE_DIVISIONS
 		province_hp = max(0.0, province_hp)
 
-		# --- Morale ---
+		# --- Morale Damage ---
 		att_morale = max(0.0, att_morale - def_ecp * manager.MORALE_DECAY_RATE)
 		def_morale = max(0.0, def_morale - att_ecp * manager.MORALE_DECAY_RATE)
 
@@ -116,7 +139,6 @@ class Battle:
 			t.divisions = max(1, int(t.divisions * 0.5))
 			TroopManager.teleport_troop_to_province(t, retreat_pid)
 
-
 		manager.conquer_province(defender_pid, attacker_country)
 		manager.end_battle(self)
 
@@ -131,7 +153,6 @@ class Battle:
 				return n
 
 		return -1
-
 
 	func _get_divisions(pid: int, country: String) -> float:
 		return float(TroopManager.get_province_strength(pid, country))
@@ -152,7 +173,6 @@ func _process(delta: float):
 	for battle in active_battles:
 		battle.tick(scaled)
 		
-
 
 func _ai_decision_tick():
 	if not CountryManager or not TroopManager or not MapManager:
@@ -232,7 +252,6 @@ func apply_casualties(pid: int, country: String, damage_divisions: float):
 			TroopManager.remove_troop_by_war(t)
 			
 
-
 func start_battle(attacker_pid: int, defender_pid: int):
 	# Prevent duplicates
 	for b in active_battles:
@@ -280,7 +299,6 @@ func conquer_province(pid: int, new_owner: String):
 	MapManager.update_province_color(pid, new_owner)
 	
 
-
 func declare_war(a: CountryData, b: CountryData) -> void:
 	add_war_silent(a, b)
 	PopupManager.show_alert("war", a, b)
@@ -316,4 +334,3 @@ func get_province_midpoint(pid1: int, pid2: int) -> Vector2:
 	var c1 = MapManager.province_centers.get(pid1, Vector2.ZERO)
 	var c2 = MapManager.province_centers.get(pid2, Vector2.ZERO)
 	return (c1 + c2) * 0.5
-

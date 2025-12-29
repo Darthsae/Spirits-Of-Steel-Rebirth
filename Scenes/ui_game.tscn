@@ -223,22 +223,37 @@ scale = Vector2(0.5, 0.5)
 texture = ExtResource("14_yp111")
 
 [node name="TopCorner" type="Sprite2D" parent="Sidemenu"]
+visible = false
 position = Vector2(297, 584)
 rotation = -1.5707964
 scale = Vector2(0.5, 0.5)
 texture = ExtResource("14_yp111")
 
-[node name="ManPowerIcon" type="Sprite2D" parent="Sidemenu"]
-position = Vector2(206, 233)
-texture = ExtResource("3_liin1")
+[node name="SideMenuButtons" type="HBoxContainer" parent="Sidemenu"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -91.0
+offset_top = -109.0
+offset_right = 91.0
+offset_bottom = -51.0
+grow_horizontal = 2
+grow_vertical = 2
 
-[node name="PoliticalPowerIcon" type="Sprite2D" parent="Sidemenu"]
-position = Vector2(67, 233)
-texture = ExtResource("2_xsn6u")
+[node name="DiplomacyMenuButton" type="Button" parent="Sidemenu/SideMenuButtons"]
+layout_mode = 2
+icon = ExtResource("2_xsn6u")
 
-[node name="MoneyIcon" type="Sprite2D" parent="Sidemenu"]
-position = Vector2(135, 233)
-texture = ExtResource("4_dw8mh")
+[node name="EconomyMenuButton" type="Button" parent="Sidemenu/SideMenuButtons"]
+layout_mode = 2
+icon = ExtResource("4_dw8mh")
+
+[node name="MilitaryMenuButton" type="Button" parent="Sidemenu/SideMenuButtons"]
+layout_mode = 2
+icon = ExtResource("3_liin1")
 
 [node name="Panel" type="Panel" parent="Sidemenu"]
 layout_mode = 0
@@ -256,7 +271,7 @@ offset_right = 234.00003
 offset_bottom = 50.0
 texture = ExtResource("2_xsn6u")
 
-[node name="Label" type="Label" parent="Sidemenu/Panel"]
+[node name="label_category" type="Label" parent="Sidemenu/Panel"]
 layout_mode = 0
 offset_top = 13.0
 offset_right = 192.0
@@ -341,4 +356,7 @@ z_index = 1
 
 [connection signal="mouse_entered" from="GameSpeedControl/Plus" to="." method="_on_button_mouse_entered"]
 [connection signal="mouse_entered" from="GameSpeedControl/Minus" to="." method="_on_button_mouse_entered"]
+[connection signal="button_up" from="Sidemenu/SideMenuButtons/DiplomacyMenuButton" to="." method="_on_menu_button_button_up" binds= [0]]
+[connection signal="button_up" from="Sidemenu/SideMenuButtons/EconomyMenuButton" to="." method="_on_menu_button_button_up" binds= [1]]
+[connection signal="button_up" from="Sidemenu/SideMenuButtons/MilitaryMenuButton" to="." method="_on_menu_button_button_up" binds= [2]]
 [connection signal="button_up" from="DecisionTreeButton" to="DecisionTreeButton" method="_on_button_up"]
