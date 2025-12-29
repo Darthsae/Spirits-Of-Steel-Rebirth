@@ -44,16 +44,17 @@ func setup_training(troop: CountryData.TroopTraining) -> void:
 	refresh_ui()
 
 # Specialized setup for Ready-to-Deploy troops
-func setup_ready(troop: CountryData.ReadyTroop) -> void:
+func setup_ready(troop: CountryData.ReadyTroop, on_click: Callable) -> void:
 	source_object = troop
 	data = {"is_deploy": true}
+	_callback = on_click # Store the callback so _on_button_pressed can call it!
 	base_text = "Deploy %d Divisions" % troop.divisions
 	
 	if not is_node_ready(): await ready
 	button.disabled = false
 	button.modulate = Color.SPRING_GREEN
 	refresh_ui()
-
+	
 # ── UI Refresh Logic ──────────────────────────────────
 signal training_finished 
 

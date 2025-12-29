@@ -205,10 +205,9 @@ func _build_action_list() -> void:
 		# Ready to Deploy
 		for troop in player_ref.ready_troops:
 			var btn = action_scene.instantiate()
-			btn.setup_ready(troop)
+			var deploy_call = Callable(self, "deploy_troop").bind(troop)
+			btn.setup_ready(troop, deploy_call)
 			actions_container.add_child(btn)
-			
-			#btn.setup_ready(troop, _deploytroop.bind({"func": "_deploy_troops", "obj": troop}))
 			
 	await get_tree().process_frame # Fixes buttons appearing disabled sometimes
 
@@ -268,6 +267,8 @@ func _conscript(data: Dictionary):
 	_build_action_list()
 	
 func deploy_troop(troop):
+	player.deploy_ready_troop_to_random(troop)
+	_build_action_list()
 	pass
 
 func improve_stability():

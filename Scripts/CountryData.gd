@@ -6,7 +6,7 @@ class_name CountryData
 # =========================================================
 var country_name: String
 var political_power: int = 50
-var money: float = 1000.0
+var money: float = 40000.0
 var manpower: int = 50000
 var stability: float = 0.5     # 0.0 to 1.0
 var war_support: float = 0.5    # 0.0 to 1.0
@@ -153,12 +153,36 @@ func train_troops(divisions: int, days: int, cost_per_day: float) -> bool:
 	
 	return true
 
-func deploy_ready_troops(index: int) -> bool:
-	if index < 0 or index >= ready_troops.size():
+func deploy_ready_troops(province_id: int) -> bool:
+	if ready_troops.is_empty():
 		return false
 	
-	var troop := ready_troops[index]
-	TroopManager.add_troops(country_name, troop.divisions)
+	var total_divisions := 0
+	for troop in ready_troops:
+		total_divisions += troop.divisions
+	
+	var success = TroopManager.create_troop(country_name, total_divisions, province_id)
+	
+	if success:
+		ready_troops.clear()
+		return true
+	return false
+	
+	
+func deploy_ready_troop_to_random(troop: ReadyTroop) -> bool:
+	var index = ready_troops.find(troop)
+	if index == -1:
+		return false
+	
+	var my_provinces: Array = MapManager.country_to_provinces.get(country_name, [])
+	if my_provinces.is_empty():
+		print("Error: No provinces found for ", country_name)
+		return false
+		
+	var random_province_id = my_provinces.pick_random()
+	
+	TroopManager.create_troop(country_name, troop.divisions, random_province_id)
+	
 	ready_troops.remove_at(index)
 	return true
 
