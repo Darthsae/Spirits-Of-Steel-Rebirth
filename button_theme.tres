@@ -1,7 +1,6 @@
-[gd_resource type="Theme" load_steps=8 format=3 uid="uid://c38ivksvf4is0"]
+[gd_resource type="Theme" load_steps=7 format=3 uid="uid://c38ivksvf4is0"]
 
 [ext_resource type="FontFile" uid="uid://c1jnrhadjfe68" path="res://font/Google_Sans/static/GoogleSans-Regular.ttf" id="1_jjpe7"]
-[ext_resource type="FontFile" uid="uid://cee8mbnpx3w3h" path="res://font/arial.TTF" id="1_y3u7b"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_y3u7b"]
 content_margin_left = 4.0
@@ -65,8 +64,8 @@ corner_radius_bottom_left = 80
 corner_detail = 5
 
 [resource]
-default_font = ExtResource("1_y3u7b")
-default_font_size = 20
+default_font = ExtResource("1_jjpe7")
+default_font_size = 18
 Button/colors/font_color = Color(0.875, 0.875, 0.875, 1)
 Button/colors/font_disabled_color = Color(1, 1, 1, 1)
 Button/colors/font_focus_color = Color(0.95, 0.95, 0.95, 1)

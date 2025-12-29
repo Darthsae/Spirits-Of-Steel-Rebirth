@@ -144,46 +144,46 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_uqxsi")
 layout_mode = 2
 color = Color(0, 0, 0, 0)
 
-[node name="TextureRect" type="TextureRect" parent="Topbar/MarginContainer2/ColorRect"]
-layout_mode = 0
-offset_left = 173.0
-offset_right = 208.0
-offset_bottom = 35.0
-texture = ExtResource("8_okksu")
-expand_mode = 1
-
-[node name="MarginContainer2" type="MarginContainer" parent="Topbar/MarginContainer2/ColorRect"]
-layout_mode = 0
-offset_left = 173.0
-offset_right = 263.0
-offset_bottom = 35.0
-tooltip_text = "World tension meter"
-
 [node name="MarginContainer" type="MarginContainer" parent="Topbar/MarginContainer2/ColorRect"]
 layout_mode = 0
-offset_right = 161.0
+offset_right = 212.0
 offset_bottom = 35.0
 theme = ExtResource("13_sdmnd")
+theme_override_constants/margin_left = 15
 
 [node name="label_date" type="Label" parent="Topbar/MarginContainer2/ColorRect/MarginContainer"]
 layout_mode = 2
 theme = SubResource("Theme_uqxsi")
-theme_override_font_sizes/font_size = 21
+theme_override_font_sizes/font_size = 16
+text = "adsdads"
+vertical_alignment = 1
+
+[node name="TextureRect" type="TextureRect" parent="Topbar/MarginContainer2/ColorRect"]
+layout_mode = 0
+offset_left = 196.0
+offset_right = 248.0
+offset_bottom = 35.0
+texture = ExtResource("8_okksu")
+expand_mode = 1
+stretch_mode = 4
 
 [node name="label_tension" type="Label" parent="Topbar/MarginContainer2/ColorRect"]
-layout_mode = 1
-anchors_preset = 6
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-offset_left = -40.0
-offset_top = -11.5
-offset_bottom = 11.5
-grow_horizontal = 0
-grow_vertical = 2
+layout_mode = 0
+offset_left = 227.0
+offset_right = 263.0
+offset_bottom = 35.0
 theme = ExtResource("13_sdmnd")
 text = "20%"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MarginContainer2" type="MarginContainer" parent="Topbar/MarginContainer2/ColorRect"]
+visible = false
+layout_mode = 0
+offset_left = 211.0
+offset_right = 263.0
+offset_bottom = 35.0
+tooltip_text = "World tension meter"
 
 [node name="GameSpeedControl" type="VBoxContainer" parent="."]
 anchors_preset = -1
