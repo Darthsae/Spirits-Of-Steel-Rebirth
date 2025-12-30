@@ -24,6 +24,8 @@ var allowedCountries: Array[String] = [] # for pathfinding
 # Training / Troop Pools
 # =========================================================
 
+var deploy_pid: int = -1  # will deploy to random province of country if not changed
+
 # --- Training ---
 class TroopTraining:
 	var divisions: int
@@ -168,7 +170,16 @@ func deploy_ready_troops(province_id: int) -> bool:
 		return true
 	return false
 	
+
+func deploy_ready_troop_to_pid(troop: ReadyTroop) -> bool:
+	var index = ready_troops.find(troop)
+	if index == -1:
+		return false
 	
+	TroopManager.create_troop(country_name, troop.divisions, deploy_pid)
+	ready_troops.remove_at(index)
+	return true
+
 func deploy_ready_troop_to_random(troop: ReadyTroop) -> bool:
 	var index = ready_troops.find(troop)
 	if index == -1:
