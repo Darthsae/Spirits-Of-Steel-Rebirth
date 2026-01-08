@@ -172,3 +172,8 @@ func spend_politicalpower(cost: int) -> bool:
 	else:
 		return false 
 	
+func set_political_power(new_power: int) -> void:
+	political_power = new_power
+
+func change_political_power(power_change: int) -> void:
+	political_power += power_change

@@ -7,8 +7,8 @@ extends Node
 
 @export_group("Zoom Settings")
 @export var zoom_factor: float = 0.1  # 10% per scroll
-@export var min_zoom: float = 0.3
-@export var max_zoom: float = 9.0
+@export var min_zoom: float = 1.1
+@export var max_zoom: float = 12.0
 
 
 var is_dragging := false

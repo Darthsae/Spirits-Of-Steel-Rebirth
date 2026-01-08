@@ -43,3 +43,7 @@ script = ExtResource("6_5ukr8")
 
 [node name="Camera2D" type="Camera2D" parent="."]
 anchor_mode = 0
+zoom = Vector2(1.1, 1.1)
+limit_top = 0
+limit_bottom = 625
+limit_smoothed = true

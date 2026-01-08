@@ -81,3 +81,19 @@ func set_player_country(country_name: String) -> void:
 	
 	print("Player is now playing as: ", country_name)
 	emit_signal("player_country_changed")
+
+func set_political_power(country_name: String, new_power: int) -> void:
+	var country := countries.get(country_name.to_lower()) as CountryData
+	if !country:
+		push_error("CountryManager: Requested non-existent country '%s'" % country_name)
+		return
+	
+	country.set_political_power(new_power)
+
+func change_political_power(country_name: String, power_change: int) -> void:
+	var country := countries.get(country_name.to_lower()) as CountryData
+	if !country:
+		push_error("CountryManager: Requested non-existent country '%s'" % country_name)
+		return
+		
+	country.change_political_power(power_change)

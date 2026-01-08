@@ -35,6 +35,10 @@ Console="*res://addons/console/console.gd"
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
+[dotnet]
+
+project/assembly_name="Spirits of Steel Rebirth"
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/console/plugin.cfg")

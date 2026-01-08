@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="MapData" load_steps=2656 format=4]
+[gd_resource type="Resource" script_class="MapData" load_steps=2656 format=4 uid="uid://dc46n8482j0yr"]
 
-[ext_resource type="Script" path="res://map_data/Province.gd" id="1_2s4mh"]
-[ext_resource type="Script" path="res://map_data/MapData.gd" id="2_miic0"]
+[ext_resource type="Script" uid="uid://cwsfwiffoqm48" path="res://map_data/Province.gd" id="1_2s4mh"]
+[ext_resource type="Script" uid="uid://cwg8rlhwlrd6g" path="res://map_data/MapData.gd" id="2_miic0"]
 
 [sub_resource type="Image" id="Image_6dbdh"]
 data = {
